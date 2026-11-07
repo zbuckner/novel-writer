@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Novel Writer</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#f0ebe0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Novel Writer">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <style>
@@ -44,6 +52,28 @@
   }
   .btn:hover { background: var(--btnhover); }
   .btn .ico { display: none; }
+  .ibtn {
+    width: 38px; height: 36px; display: inline-flex; align-items: center; justify-content: center; padding: 0; flex: none;
+    border: 1px solid var(--line); background: var(--btn); border-radius: 6px;
+  }
+  .ibtn:hover:not(:disabled) { background: var(--btnhover); }
+  .ibtn:disabled { opacity: .35; cursor: default; }
+  .ibtn.on { background: var(--btnhover); border-color: var(--accent); }
+  .ibtn .chev { margin-left: 2px; }
+  .ibtn svg { display: block; }
+  .qg { font: 600 24px/1 Georgia, 'Times New Roman', serif; letter-spacing: -1px; padding-top: 6px; }
+  .only-touch { display: none; }
+  @media (pointer: coarse) { .only-touch { display: inline-flex; } .row-pw { display: none; } }
+  #btnSave .ck { display: none; }
+  #btnSave.saved .fl { display: none; }
+  #btnSave.saved .ck { display: block; color: #3a9d5d; }
+  .tg { display: flex; gap: 6px; align-items: center; flex: none; }
+  .menu {
+    position: fixed; z-index: 30; background: var(--btn); border: 1px solid var(--line); border-radius: 8px;
+    box-shadow: 0 6px 20px rgba(0,0,0,.25); padding: 4px; min-width: 170px;
+  }
+  .menu button { display: block; width: 100%; text-align: left; background: none; border: 0; padding: 10px 12px; font-size: 14px; border-radius: 6px; }
+  .menu button:hover { background: var(--btnhover); }
 
   /* ---- writing tools strip (Writing tab only) ---- */
   .tools {
@@ -93,7 +123,7 @@
 
   .scroll { flex: 1; overflow-y: auto; padding: 24px 12px 80px; }
   .page {
-    max-width: 38em; margin: 0 auto; background: var(--paper);
+    max-width: var(--pw, 760px); margin: 0 auto; background: var(--paper);
     padding: 3.5em 3.5em 5em; min-height: 100%;
     box-shadow: 0 2px 14px rgba(0,0,0,.18);
   }
@@ -147,8 +177,8 @@
   .modal h3 { margin: 0 0 8px; font-size: 18px; }
   .modal p { margin: 0 0 16px; line-height: 1.5; font-size: 14px; color: var(--muted); }
   .modal .btns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
-  .sync { display: flex; align-items: center; gap: 6px; background: none; border: 0; font-size: 13px; color: var(--muted); padding: 4px 6px; white-space: nowrap; }
-  .sdot { width: 9px; height: 9px; border-radius: 50%; background: #aaa; flex: none; }
+  .sync { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 36px; background: none; border: 0; color: var(--muted); padding: 0; flex: none; }
+  .sdot { position: absolute; right: 4px; bottom: 5px; width: 8px; height: 8px; border-radius: 50%; background: #aaa; border: 2px solid var(--bar); box-sizing: content-box; }
   .sync[data-k="ok"] .sdot { background: #3a9d5d; }
   .sync[data-k="busy"] .sdot, .sync[data-k="warn"] .sdot { background: #d4a017; }
   .sync[data-k="err"] .sdot { background: #c0392b; }
@@ -285,9 +315,23 @@
     .brand { display: none; }
     .sync .slbl { display: none; }
     .tabs { flex: 1; }
-    .tabs button { padding: 13px 8px 10px; font-size: 14px; }
+    .topbar { padding: 0 6px; padding-top: env(safe-area-inset-top); }
+    .tabs { gap: 0; }
+    .tabs button { padding: 13px 6px 10px; font-size: 14px; }
+    .top-right { gap: 2px; }
+    .top-right .ibtn { width: 34px; }
+    .sync { width: 32px; }
     .btn .lbl { display: none; }
     .btn .ico { display: inline; }
+    .row-pw { display: none; }
+  }
+  @media (max-width: 360px) {
+    .tools { padding: 8px 6px; gap: 4px; }
+    .tg { gap: 3px; }
+    .tools .ibtn { width: 33px; }
+    .tabs button { padding: 13px 4px 10px; font-size: 13px; }
+    .top-right .ibtn { width: 31px; }
+    .sync { width: 28px; }
   }
   @media (max-width: 600px) {
     .page { padding: 1.8em 1.4em 4em; }
@@ -307,24 +351,33 @@
       <button data-tab="export">Export</button>
     </nav>
     <div class="top-right">
-      <button class="sync" id="syncBtn" data-k="off" title="Google Drive: not connected"><span class="sdot"></span><span class="slbl">Not synced</span></button>
-      <button class="btn" id="btnSave" title="Save now (Ctrl/Cmd+S)">Save</button>
-      <button class="btn" id="btnSettings" title="Settings"><span class="lbl">Settings</span><span class="ico">&#9881;</span></button>
+      <button class="sync" id="syncBtn" data-k="off" title="Google Drive: not connected" aria-label="Google Drive sync"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg><span class="sdot"></span><span class="slbl vh">Not synced</span></button>
+      <button class="ibtn" id="btnSave" title="Save now (Ctrl/Cmd+S)" aria-label="Save"><svg class="fl" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg><svg class="ck" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg></button>
+      <button class="ibtn" id="btnSettings" title="Display and settings" aria-label="Settings"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></svg></button>
     </div>
   </header>
 
   <div class="tools" id="writeTools">
-    <button class="btn" id="btnNav" title="Show or hide the contents list">Contents</button>
-    <button class="btn keep" id="btnUndo" title="Undo (Ctrl/Cmd+Z)" disabled>Undo</button>
-    <button class="btn keep" id="btnRedo" title="Redo (Ctrl/Cmd+Shift+Z)" disabled>Redo</button>
-    <button class="btn keep" id="btnChapter" title="Start a new chapter">New Chapter</button>
-    <button class="btn keep" id="btnScene" title="Insert a scene break">Scene Break</button>
-    <button class="btn keep" id="btnPart" title="Insert a standalone part page (Part One, etc.)">Part Page</button>
-    <button class="btn keep" id="btnItalic" title="Italic (Ctrl/Cmd+I)"><em>Italic</em></button>
-    <button class="btn keep" id="btnCuts" title="Move the highlighted text to Cut Scenes">Move to Cut Scenes</button>
+    <div class="tg">
+      <button class="ibtn" id="btnNav" title="Contents" aria-label="Contents"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></button>
+      <button class="ibtn keep" id="btnCNotes" title="Notes for this chapter" aria-label="Chapter notes"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15.5 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3Z"/><path d="M15 3v6h6"/><path d="M8 13h8M8 17h5"/></svg></button>
+    </div>
     <div class="spacer"></div>
     <span class="count" id="count">0 words</span>
-    <button class="btn keep" id="btnCNotes" title="Notes for the chapter you're in">Chapter Notes</button>
+    <div class="tg">
+      <button class="ibtn keep only-touch" id="btnQuote" title="Quotation marks" aria-label="Quotation marks"><span class="qg">&ldquo;&rdquo;</span></button>
+      <button class="ibtn keep" id="btnUndo" title="Undo (Ctrl/Cmd+Z)" aria-label="Undo" disabled><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
+      <button class="ibtn keep" id="btnRedo" title="Redo (Ctrl/Cmd+Shift+Z)" aria-label="Redo" disabled><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg></button>
+      <button class="ibtn keep" id="btnItalic" title="Italic (Ctrl/Cmd+I)" aria-label="Italic"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" x2="10" y1="4" y2="4"/><line x1="14" x2="5" y1="20" y2="20"/><line x1="15" x2="9" y1="4" y2="20"/></svg></button>
+      <button class="ibtn keep" id="btnBreak" title="Insert a break" aria-label="Insert a break"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="3" x2="21" y1="12" y2="12"/><polyline points="8 8 12 4 16 8"/><polyline points="16 16 12 20 8 16"/></svg><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+      <button class="ibtn keep" id="btnCuts" title="Move the highlighted text to Cut Scenes" aria-label="Move to Cut Scenes"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" x2="8.12" y1="4" y2="15.88"/><line x1="14.47" x2="20" y1="14.48" y2="20"/><line x1="8.12" x2="12" y1="8.12" y2="12"/></svg></button>
+    </div>
+  </div>
+
+  <div class="menu" id="breakMenu" hidden>
+    <button class="keep" id="btnChapter">Chapter Break</button>
+    <button class="keep" id="btnScene">Scene Break</button>
+    <button class="keep" id="btnPart">Part Break</button>
   </div>
 
   <div class="settings" id="settings">
@@ -336,6 +389,10 @@
     <div class="row">
       <label for="indent">Paragraph indent: <span id="indentVal"></span></label>
       <input type="range" id="indent" min="0" max="3" step="0.1">
+    </div>
+    <div class="row row-pw">
+      <label for="pagewidth">Page width: <span id="pagewidthVal"></span></label>
+      <input type="range" id="pagewidth" min="480" max="1200" step="20">
     </div>
     <div class="row">
       <label for="theme">Theme</label>
@@ -713,6 +770,48 @@
     else toast('Click inside a paragraph where this should go.', null, null, 3500);
   };
 
+  /* ---- break menu ---- */
+  var menu = $('breakMenu');
+  function closeMenu() { menu.hidden = true; }
+  $('btnBreak').onclick = function (e) {
+    e.stopPropagation();
+    if (!menu.hidden) { closeMenu(); return; }
+    var r = this.getBoundingClientRect();
+    menu.style.top = (r.bottom + 4) + 'px';
+    menu.style.right = Math.max(8, window.innerWidth - r.right) + 'px';
+    menu.hidden = false;
+  };
+  menu.addEventListener('click', closeMenu);
+  document.addEventListener('click', function (e) { if (!menu.contains(e.target)) closeMenu(); });
+
+  /* ---- quotation marks (for phones and tablets) ---- */
+  $('btnQuote').onclick = function () {
+    var sel = window.getSelection();
+    if (!sel.rangeCount || !editor.contains(sel.anchorNode)) {
+      var r0 = getRange(); editor.focus(); sel.removeAllRanges(); sel.addRange(r0);
+    }
+    var r = sel.getRangeAt(0);
+    if (!sel.isCollapsed) {
+      if (blockOf(r.startContainer) !== blockOf(r.endContainer)) { toast('Select text inside one paragraph to put quotes around it.', null, null, 3500); return; }
+      var startR = r.cloneRange(); startR.collapse(true);
+      var endR = r.cloneRange(); endR.collapse(false);
+      sel.removeAllRanges(); sel.addRange(endR);
+      document.execCommand('insertText', false, '”');
+      var after = sel.getRangeAt(0).cloneRange();
+      sel.removeAllRanges(); sel.addRange(startR);
+      document.execCommand('insertText', false, '“');
+      sel.removeAllRanges(); sel.addRange(after);
+      return;
+    }
+    var n = r.startContainer;
+    if (n.nodeType === 3 && n.data.charAt(r.startOffset) === '”') {   // already inside a pair: step out of it
+      sel.collapse(n, r.startOffset + 1);
+      return;
+    }
+    document.execCommand('insertText', false, '“”');
+    sel.modify('move', 'backward', 'character');
+  };
+
   // remove a part page with its x button
   editor.addEventListener('mousedown', function (e) { if (e.target.closest && e.target.closest('.part-x')) e.preventDefault(); });
   editor.addEventListener('click', function (e) {
@@ -949,21 +1048,28 @@
     if (editor.contains(document.activeElement)) schedule();
   });
 
-  function closePanels() { layout.classList.remove('nav-open', 'notes-open'); }
+  function panelBtns() {
+    $('btnNav').classList.toggle('on', layout.classList.contains('nav-open'));
+    $('btnCNotes').classList.toggle('on', layout.classList.contains('notes-open'));
+  }
+  function closePanels() { layout.classList.remove('nav-open', 'notes-open'); panelBtns(); }
   $('btnNav').onclick = function () {
     var open = !layout.classList.contains('nav-open');
     if (window.innerWidth <= 700) layout.classList.remove('notes-open');
     layout.classList.toggle('nav-open', open);
+    panelBtns();
   };
   $('btnCNotes').onclick = function () {
     var open = !layout.classList.contains('notes-open');
     if (window.innerWidth <= 700) layout.classList.remove('nav-open');
     layout.classList.toggle('notes-open', open);
     if (open) { curCh = undefined; refreshPanel(); }
+    panelBtns();
   };
-  $('cnClose').onclick = function () { layout.classList.remove('notes-open'); };
+  $('cnClose').onclick = function () { layout.classList.remove('notes-open'); panelBtns(); };
   $('backdrop').onclick = closePanels;
   if (window.innerWidth > 700) layout.classList.add('nav-open');
+  panelBtns();
 
   /* ================= notes tab ================= */
   var SECTIONS = [
@@ -1290,8 +1396,8 @@
   function doSave() {
     flush();
     if (load(K_ON, '') === '1') syncNow(true);
-    saveBtn.textContent = 'Saved ✓';
-    setTimeout(function () { saveBtn.textContent = 'Save'; }, 1500);
+    saveBtn.classList.add('saved');
+    setTimeout(function () { saveBtn.classList.remove('saved'); }, 1500);
   }
   saveBtn.onclick = doSave;
   document.addEventListener('keydown', function (e) {
@@ -1310,6 +1416,10 @@
     document.documentElement.style.setProperty('--indent', v + 'em');
     inVal.textContent = v + ' em'; inSlider.value = v;
   }
+  function setPW(v) {
+    document.documentElement.style.setProperty('--pw', v + 'px');
+    $('pagewidthVal').textContent = v + ' px'; $('pagewidth').value = v;
+  }
   function applyTheme() {
     var pref = themeSel.value;
     var dark = pref === 'dark' || (pref === 'system' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
@@ -1317,10 +1427,12 @@
   }
   setFont(parseFloat(load('novel-writer-fontsize', window.innerWidth < 600 ? 18 : 20)));
   setIndent(parseFloat(load('novel-writer-indent', 1.5)));
+  setPW(parseFloat(load('novel-writer-pagewidth', 760)));
   themeSel.value = load('novel-writer-theme', 'system');
   applyTheme();
   fsSlider.oninput = function () { setFont(fsSlider.value); save('novel-writer-fontsize', fsSlider.value); updateActive(); };
   inSlider.oninput = function () { setIndent(inSlider.value); save('novel-writer-indent', inSlider.value); };
+  $('pagewidth').oninput = function () { setPW(this.value); save('novel-writer-pagewidth', this.value); };
   themeSel.onchange = function () { save('novel-writer-theme', themeSel.value); applyTheme(); };
   if (window.matchMedia) {
     var mq = matchMedia('(prefers-color-scheme: dark)');
@@ -1332,7 +1444,7 @@
   });
 
   /* ================= Google Drive sync ================= */
-  var GOOGLE_CLIENT_ID = '';   // optional: paste your Client ID here instead of in Settings
+  var GOOGLE_CLIENT_ID = '570236449298-48eci134vbuag44qflde5tkflkfnihc5.apps.googleusercontent.com';   // optional: paste your Client ID here instead of in Settings
   var SCOPE = 'https://www.googleapis.com/auth/drive.file';   // the app can only see files it created
   var FILE_NAME = 'novel-writer.json';
   var API = 'https://www.googleapis.com/drive/v3/', UP = 'https://www.googleapis.com/upload/drive/v3/';
@@ -1571,6 +1683,9 @@
   resetHistory();
   if (driveOn()) setStatus('warn', 'Tap to sync', 'Tap here (or Save) to sync with Google Drive.');
   showTab(load('novel-writer-tab', 'writing'));
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+    window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
+  }
 })();
 </script>
 </body>
