@@ -1,0 +1,1575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Novel Writer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --indent: 1.5em; --fs: 20px;
+    --bg: #e9e4d8; --paper: #fbf8f1; --ink: #222; --bar: #f0ebe0; --line: #ddd5c4;
+    --btn: #fff; --btnhover: #f7f3ea; --muted: #777; --accent: #8a6d3b; --card: #fff; --sticky: #fff6d6;
+  }
+  html[data-theme="dark"] {
+    --bg: #121211; --paper: #1e1d1b; --ink: #d8d3c6; --bar: #262523; --line: #3a3834;
+    --btn: #2f2d2a; --btnhover: #3a3834; --muted: #928c7e; --accent: #c9a35f; --card: #252321; --sticky: #3a3424;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); }
+  body { display: flex; flex-direction: column; font-family: system-ui, -apple-system, sans-serif; }
+  button { font: inherit; color: var(--ink); cursor: pointer; }
+
+  /* ---- top bar: tabs in the center, Save + Settings on the right ---- */
+  .topbar {
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px;
+    padding: 0 12px; padding-top: env(safe-area-inset-top);
+    background: var(--bar); border-bottom: 1px solid var(--line); overflow-x: auto;
+  }
+  .brand { font-family: 'EB Garamond', Georgia, serif; font-size: 18px; letter-spacing: .02em; white-space: nowrap; }
+  .tabs { display: flex; gap: 4px; }
+  .tabs button {
+    background: none; border: 0; border-bottom: 3px solid transparent; padding: 13px 14px 10px;
+    font-size: 15px; color: var(--muted);
+  }
+  .tabs button:hover { color: var(--ink); }
+  .tabs button.on { color: var(--ink); border-bottom-color: var(--accent); font-weight: 600; }
+  .top-right { display: flex; gap: 8px; justify-content: flex-end; }
+  .btn {
+    font-size: 14px; padding: 7px 12px; border: 1px solid var(--line);
+    background: var(--btn); border-radius: 6px; white-space: nowrap; flex: none;
+  }
+  .btn:hover { background: var(--btnhover); }
+  .btn .ico { display: none; }
+
+  /* ---- writing tools strip (Writing tab only) ---- */
+  .tools {
+    display: flex; gap: 8px; align-items: center; padding: 8px 12px; overflow-x: auto;
+    background: var(--bar); border-bottom: 1px solid var(--line);
+  }
+  .spacer { flex: 1; }
+  .count { font-size: 13px; color: var(--muted); white-space: nowrap; }
+
+  main { flex: 1; min-height: 0; position: relative; }
+  .tab { height: 100%; }
+
+  /* ---- writing tab layout ---- */
+  .layout { height: 100%; display: flex; min-height: 0; position: relative; }
+
+  .nav {
+    display: none; width: 240px; flex: none; overflow-y: auto; padding: 10px 0 40px;
+    background: var(--bar); border-right: 1px solid var(--line);
+  }
+  .layout.nav-open .nav { display: block; }
+  .nav-title { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); padding: 6px 14px 8px; }
+  .nav-empty { font-size: 13px; color: var(--muted); padding: 4px 14px; }
+  .nav-item {
+    display: block; width: 100%; text-align: left; background: none; border: 0;
+    padding: 7px 14px; font-size: 14px; cursor: pointer;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .nav-item:hover { background: var(--btnhover); }
+  .nav-item.part-i { font-weight: 600; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+  .nav-item.sub { padding-left: 34px; font-size: 13px; color: var(--muted); }
+  .nav-item.active { color: var(--accent); font-weight: 600; background: var(--btnhover); }
+  .backdrop { display: none; }
+
+  .cnotes {
+    display: none; width: 280px; flex: none; flex-direction: column; padding: 12px;
+    background: var(--bar); border-left: 1px solid var(--line);
+  }
+  .layout.notes-open .cnotes { display: flex; }
+  .cn-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .cn-head strong { flex: 1; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cn-head button { background: none; border: 0; font-size: 22px; line-height: 1; color: var(--muted); }
+  .cnotes textarea {
+    flex: 1; resize: none; width: 100%; padding: 10px; font: inherit; font-size: 15px; line-height: 1.5;
+    background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 8px;
+  }
+  .cn-hint { font-size: 12px; color: var(--muted); margin-top: 8px; }
+
+  .scroll { flex: 1; overflow-y: auto; padding: 24px 12px 80px; }
+  .page {
+    max-width: 38em; margin: 0 auto; background: var(--paper);
+    padding: 3.5em 3.5em 5em; min-height: 100%;
+    box-shadow: 0 2px 14px rgba(0,0,0,.18);
+  }
+  #editor {
+    outline: none; font-family: 'EB Garamond', Garamond, Georgia, serif;
+    font-size: var(--fs); line-height: 1.55; counter-reset: chapter;
+    text-align: justify; hyphens: auto; -webkit-hyphens: auto;
+  }
+  #editor p { margin: 0; text-indent: var(--indent); min-height: 1.55em; }
+  #editor h2.chapter + p, #editor .scene-break + p, #editor .part + p, #editor > p:first-child { text-indent: 0; }
+  #editor h2.chapter {
+    counter-increment: chapter; text-align: center; font-weight: 500;
+    font-size: 1.5em; margin: 2.2em 0 1.6em; line-height: 1.3;
+  }
+  #editor h2.chapter:first-child { margin-top: .5em; }
+  #editor h2.chapter::before {
+    content: "Chapter " counter(chapter); display: block; font-size: .62em;
+    letter-spacing: .15em; text-transform: uppercase; color: var(--muted); margin-bottom: .3em;
+  }
+  #editor .scene-break { margin: 1.55em 0; text-align: center; user-select: none; -webkit-user-select: none; }
+  #editor .scene-break::before { content: "*  *  *"; letter-spacing: .5em; padding-left: .5em; }
+
+  /* part page: a standalone divider page ("Part One"); exported as its own centered page */
+  #editor .part {
+    position: relative; margin: 2.6em 0; padding: 4.5em 1em 4em; text-align: center; text-indent: 0;
+    border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  }
+  #editor .part::before {
+    content: "Part page"; position: absolute; top: 10px; left: 0; right: 0; font: 11px system-ui, sans-serif;
+    letter-spacing: .14em; text-transform: uppercase; color: var(--muted); user-select: none; -webkit-user-select: none;
+  }
+  #editor .part-title { font-size: 1.9em; line-height: 1.2; font-weight: 500; outline: none; min-height: 1.2em; }
+  #editor .part-sub { font-size: 1.05em; font-style: italic; color: var(--muted); margin-top: .6em; outline: none; min-height: 1.4em; }
+  #editor .part [data-ph]:empty::before { content: attr(data-ph); color: var(--muted); opacity: .55; }
+  #editor .part-x {
+    position: absolute; top: 6px; right: 8px; width: 28px; height: 28px; background: none; border: 0; opacity: .4;
+    font: 20px/1 system-ui, sans-serif; color: var(--ink); user-select: none; -webkit-user-select: none;
+  }
+  #editor .part-x::before { content: "\00d7"; }
+  #editor .part:hover .part-x { opacity: 1; }
+
+  /* ---- toast, dialog, sync indicator ---- */
+  .toast {
+    position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
+    background: #2b2926; color: #f2eee4; padding: 10px 16px; border-radius: 10px; display: flex; gap: 16px;
+    align-items: center; z-index: 40; box-shadow: 0 6px 20px rgba(0,0,0,.35); font-size: 14px; max-width: 92vw;
+  }
+  .toast button { background: none; border: 0; color: #e3c27d; font-weight: 600; font-size: 14px; padding: 2px 4px; }
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
+  .modal .box { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px; max-width: 440px; }
+  .modal h3 { margin: 0 0 8px; font-size: 18px; }
+  .modal p { margin: 0 0 16px; line-height: 1.5; font-size: 14px; color: var(--muted); }
+  .modal .btns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+  .sync { display: flex; align-items: center; gap: 6px; background: none; border: 0; font-size: 13px; color: var(--muted); padding: 4px 6px; white-space: nowrap; }
+  .sdot { width: 9px; height: 9px; border-radius: 50%; background: #aaa; flex: none; }
+  .sync[data-k="ok"] .sdot { background: #3a9d5d; }
+  .sync[data-k="busy"] .sdot, .sync[data-k="warn"] .sdot { background: #d4a017; }
+  .sync[data-k="err"] .sdot { background: #c0392b; }
+  .sync[data-k="busy"] .sdot { animation: pulse 1s infinite; }
+  @keyframes pulse { 50% { opacity: .35; } }
+
+  /* ---- settings panel ---- */
+  .settings {
+    position: fixed; right: 12px; top: calc(env(safe-area-inset-top, 0px) + 50px); background: var(--btn);
+    border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; width: 260px; display: none;
+    box-shadow: 0 6px 20px rgba(0,0,0,.25); z-index: 20; max-height: calc(100vh - 70px); overflow-y: auto;
+  }
+  .settings.open { display: block; }
+  .settings h3 { margin: 0 0 12px; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  .settings label { font-size: 14px; display: block; margin-bottom: 6px; }
+  .settings .row { margin-bottom: 14px; }
+  .settings .row:last-child { margin-bottom: 0; }
+  .settings input[type=range] { width: 100%; }
+  .settings .note { font-size: 13px; color: var(--muted); line-height: 1.4; margin-bottom: 10px; }
+  .settings .note.err { color: #c0392b; margin: 10px 0 0; }
+  .settings .txt { width: 100%; font: inherit; font-size: 13px; padding: 6px; background: var(--paper); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; margin-bottom: 10px; }
+  .settings .btnrow { display: flex; gap: 8px; flex-wrap: wrap; }
+  .settings select { width: 100%; font: inherit; font-size: 14px; padding: 6px; background: var(--paper); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; }
+
+  .btn:disabled { opacity: .4; cursor: default; }
+  .btn:disabled:hover { background: var(--btn); }
+  .vh { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+  #tab-import, #tab-export { overflow-y: auto; padding: 24px 16px 80px; }
+  .io-wrap { max-width: 640px; margin: 0 auto; }
+  .io-card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+  .io-card h2 { font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: 22px; margin: 0 0 6px; }
+  .io-card p { margin: 0 0 14px; line-height: 1.5; font-size: 14px; color: var(--muted); }
+  .io-card.dim { opacity: .55; }
+  .io-card.dim p { margin: 0; }
+  .io-msg { font-size: 14px; margin: 10px 0 0; min-height: 1.2em; }
+  .io-msg.err { color: #c0392b; }
+  .drop { margin-top: 14px; border: 2px dashed var(--line); border-radius: 10px; padding: 22px; text-align: center; font-size: 14px; color: var(--muted); }
+  .drop.over { border-color: var(--accent); color: var(--accent); }
+  .file-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+  .file-row:first-child { margin-top: 14px; }
+  .file-row .fi { flex: 1; min-width: 0; }
+  .file-row strong { display: block; font-size: 14px; font-weight: 600; }
+  .file-row span { display: block; font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* ---- placeholder tabs ---- */
+  .soon { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px; color: var(--muted); }
+  .soon h1 { color: var(--ink); font-family: 'EB Garamond', Georgia, serif; font-weight: 500; margin: 0 0 8px; }
+  .soon p { max-width: 28em; margin: 0; line-height: 1.5; }
+
+  /* ---- notes tab ---- */
+  #tab-notes { overflow-y: auto; padding: 24px 16px 80px; }
+  .notes-wrap { max-width: 920px; margin: 0 auto; }
+  .pg-title, .sec-head h1 { font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: 30px; margin: 0 0 18px; }
+  .sec-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 4px; }
+  .small { font-size: 13px; padding: 5px 10px; border: 1px solid var(--line); background: var(--btn); border-radius: 6px; }
+  .small:hover { background: var(--btnhover); }
+  .meta { font-size: 13px; color: var(--muted); margin: 0 0 14px; }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+  .tile {
+    aspect-ratio: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: 4px; text-align: left;
+    padding: 16px; background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+  }
+  .tile:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .tile strong { font-family: 'EB Garamond', Georgia, serif; font-size: 22px; font-weight: 500; }
+  .tile .blurb { font-size: 13px; color: var(--muted); line-height: 1.35; }
+  .tile .count { font-size: 12px; color: var(--accent); margin-top: 6px; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; align-items: start; }
+  .card { position: relative; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 14px 12px; }
+  .card .x {
+    position: absolute; top: 6px; right: 8px; background: none; border: 0; font-size: 20px; line-height: 1;
+    color: var(--muted); padding: 2px 6px; opacity: .5;
+  }
+  .card:hover .x, .card .x:focus { opacity: 1; }
+  .fld { display: block; margin-bottom: 10px; }
+  .fld > span { display: block; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; }
+  .f {
+    width: 100%; font: inherit; font-size: 15px; line-height: 1.45; padding: 6px 8px; resize: none; overflow: hidden;
+    background: transparent; color: var(--ink); border: 1px solid transparent; border-radius: 6px; border-bottom-color: var(--line);
+  }
+  .f:focus { outline: none; border-color: var(--accent); background: var(--paper); }
+  textarea.f { min-height: 2.4em; }
+  .f.big { font-family: 'EB Garamond', Georgia, serif; font-size: 20px; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .card-foot { display: flex; justify-content: flex-end; }
+  .add-tile {
+    min-height: 90px; background: none; border: 2px dashed var(--line); border-radius: 10px; color: var(--muted); font-size: 15px;
+  }
+  .add-tile:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* timeline: a vertical line with + buttons */
+  .tl { max-width: 640px; margin: 10px auto 0; }
+  .tl-row { position: relative; padding-left: 64px; }
+  .tl-row::before { content: ""; position: absolute; left: 27px; top: 0; bottom: 0; width: 2px; background: var(--line); }
+  .tl-row.slot { height: 38px; }
+  .tl-row.slot.end::before { bottom: 50%; }
+  .tl-row .card { margin: 0; }
+  .tl-row.ev { padding-bottom: 0; }
+  .dot { position: absolute; left: 21px; top: 20px; width: 14px; height: 14px; border-radius: 50%; background: var(--accent); border: 3px solid var(--bg); box-sizing: content-box; margin: -3px; }
+  .plus {
+    position: absolute; left: 13px; top: 5px; width: 30px; height: 30px; border-radius: 50%; padding: 0;
+    background: var(--card); border: 2px solid var(--accent); color: var(--accent); font-size: 20px; line-height: 1;
+    opacity: 0; transition: opacity .12s;
+  }
+  .slot:hover .plus, .slot.end .plus, .plus:focus { opacity: 1; }
+  .plus:hover { background: var(--accent); color: var(--paper); }
+  .slot .hint { position: absolute; left: 64px; top: 9px; font-size: 14px; color: var(--muted); }
+  @media (hover: none) { .plus { opacity: .6; } }
+
+  /* ideas wall */
+  .quick-row { display: flex; gap: 8px; margin-bottom: 18px; }
+  .quick { flex: 1; font: inherit; font-size: 16px; padding: 10px 12px; background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; }
+  .quick:focus { outline: none; border-color: var(--accent); }
+  .wall { columns: 240px; column-gap: 14px; }
+  .wall .card { background: var(--sticky); break-inside: avoid; margin-bottom: 14px; padding-right: 26px; }
+  .wall .fld { margin: 0; }
+
+  /* fix-later checklist */
+  .checks { display: flex; flex-direction: column; gap: 6px; max-width: 720px; }
+  .check { display: flex; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; }
+  .check input[type=checkbox] { width: 20px; height: 20px; flex: none; accent-color: var(--accent); }
+  .check .f { flex: 1; }
+  .check.done .f { text-decoration: line-through; color: var(--muted); }
+  .check .x { background: none; border: 0; font-size: 20px; color: var(--muted); padding: 2px 8px; }
+
+  @media (max-width: 700px) {
+    .nav, .cnotes { position: absolute; z-index: 4; top: 0; bottom: 0; max-width: 320px; box-shadow: 0 0 18px rgba(0,0,0,.3); }
+    .nav { left: 0; width: 78%; }
+    .cnotes { right: 0; width: 86%; }
+    .layout.nav-open .backdrop, .layout.notes-open .backdrop { display: block; position: absolute; inset: 0; z-index: 3; background: rgba(0,0,0,.35); }
+    .topbar { display: flex; gap: 4px; }
+    .brand { display: none; }
+    .sync .slbl { display: none; }
+    .tabs { flex: 1; }
+    .tabs button { padding: 13px 8px 10px; font-size: 14px; }
+    .btn .lbl { display: none; }
+    .btn .ico { display: inline; }
+  }
+  @media (max-width: 600px) {
+    .page { padding: 1.8em 1.4em 4em; }
+    .count { display: none; }
+    .two { grid-template-columns: 1fr; gap: 0; }
+    .tile { aspect-ratio: auto; min-height: 120px; }
+  }
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">Novel Writer</div>
+    <nav class="tabs" id="tabs">
+      <button data-tab="import">Import</button>
+      <button data-tab="writing">Writing</button>
+      <button data-tab="notes">Notes</button>
+      <button data-tab="export">Export</button>
+    </nav>
+    <div class="top-right">
+      <button class="sync" id="syncBtn" data-k="off" title="Google Drive: not connected"><span class="sdot"></span><span class="slbl">Not synced</span></button>
+      <button class="btn" id="btnSave" title="Save now (Ctrl/Cmd+S)">Save</button>
+      <button class="btn" id="btnSettings" title="Settings"><span class="lbl">Settings</span><span class="ico">&#9881;</span></button>
+    </div>
+  </header>
+
+  <div class="tools" id="writeTools">
+    <button class="btn" id="btnNav" title="Show or hide the contents list">Contents</button>
+    <button class="btn keep" id="btnUndo" title="Undo (Ctrl/Cmd+Z)" disabled>Undo</button>
+    <button class="btn keep" id="btnRedo" title="Redo (Ctrl/Cmd+Shift+Z)" disabled>Redo</button>
+    <button class="btn keep" id="btnChapter" title="Start a new chapter">New Chapter</button>
+    <button class="btn keep" id="btnScene" title="Insert a scene break">Scene Break</button>
+    <button class="btn keep" id="btnPart" title="Insert a standalone part page (Part One, etc.)">Part Page</button>
+    <button class="btn keep" id="btnItalic" title="Italic (Ctrl/Cmd+I)"><em>Italic</em></button>
+    <button class="btn keep" id="btnCuts" title="Move the highlighted text to Cut Scenes">Move to Cut Scenes</button>
+    <div class="spacer"></div>
+    <span class="count" id="count">0 words</span>
+    <button class="btn keep" id="btnCNotes" title="Notes for the chapter you're in">Chapter Notes</button>
+  </div>
+
+  <div class="settings" id="settings">
+    <h3>Display</h3>
+    <div class="row">
+      <label for="fontsize">Font size: <span id="fontsizeVal"></span></label>
+      <input type="range" id="fontsize" min="14" max="32" step="1">
+    </div>
+    <div class="row">
+      <label for="indent">Paragraph indent: <span id="indentVal"></span></label>
+      <input type="range" id="indent" min="0" max="3" step="0.1">
+    </div>
+    <div class="row">
+      <label for="theme">Theme</label>
+      <select id="theme">
+        <option value="system">Match my device</option>
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+      </select>
+    </div>
+    <h3 style="margin-top:20px">Google Drive</h3>
+    <div class="note" id="driveState"></div>
+    <div id="gclientRow">
+      <label for="gclient">Google Client ID</label>
+      <input class="txt" type="text" id="gclient" placeholder="1234-abc.apps.googleusercontent.com" autocomplete="off" autocapitalize="off" spellcheck="false">
+    </div>
+    <div class="btnrow">
+      <button class="btn" id="btnConnect">Connect Google Drive</button>
+      <button class="btn" id="btnSyncNow" hidden>Sync now</button>
+      <button class="btn" id="btnDisconnect" hidden>Disconnect</button>
+    </div>
+    <div class="note err" id="driveMsg"></div>
+  </div>
+
+  <main>
+    <section class="tab" id="tab-import" hidden>
+      <div class="io-wrap">
+        <h1 class="pg-title">Import</h1>
+        <p class="meta">Bring a saved book onto this device. A book file holds everything: chapters, part pages, scene breaks, italics, and all of your notes.</p>
+        <div class="io-card">
+          <h2>From Google Drive</h2>
+          <p id="impDriveNote"></p>
+          <button class="btn" id="impDriveBtn">Look in Google Drive</button>
+          <div id="impDriveList"></div>
+        </div>
+        <div class="io-card">
+          <h2>From a file on this device</h2>
+          <p>Choose a book file (.json) that you saved earlier.</p>
+          <label class="btn" style="display:inline-block">Choose a file&hellip;<input type="file" id="impFile" accept=".json,application/json" class="vh"></label>
+          <div class="drop" id="drop">or drop the file here</div>
+        </div>
+        <p class="io-msg" id="impMsg"></p>
+      </div>
+    </section>
+
+    <section class="tab" id="tab-writing">
+      <div class="layout" id="layout">
+        <nav class="nav" id="nav">
+          <div class="nav-title">Contents</div>
+          <div id="navList"></div>
+        </nav>
+        <div class="backdrop" id="backdrop"></div>
+        <div class="scroll" id="scroll">
+          <div class="page">
+            <div id="editor" contenteditable="true" spellcheck="true" lang="en"></div>
+          </div>
+        </div>
+        <aside class="cnotes" id="cnotes">
+          <div class="cn-head"><strong id="cnTitle"></strong><button id="cnClose" title="Close" aria-label="Close">&times;</button></div>
+          <textarea id="cnText" spellcheck="true"></textarea>
+          <div class="cn-hint">Saved with your book, but never exported.</div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="tab" id="tab-notes" hidden>
+      <div class="notes-wrap" id="notesRoot"></div>
+    </section>
+
+    <section class="tab" id="tab-export" hidden>
+      <div class="io-wrap">
+        <h1 class="pg-title">Export</h1>
+        <p class="meta" id="expStats"></p>
+        <div class="io-card">
+          <h2>Book file (.json)</h2>
+          <p>Your whole book and every note in one file. Keep it as a backup, or import it on any device.</p>
+          <button class="btn" id="expJson">Download book file</button>
+          <p class="io-msg" id="expMsg"></p>
+        </div>
+        <div class="io-card dim">
+          <h2>Manuscript (.docx)</h2>
+          <p>Standard manuscript format, with its own indent, font, and chapter and part page settings. Coming soon.</p>
+        </div>
+        <div class="io-card dim">
+          <h2>Ebook (.epub)</h2>
+          <p>A reflowable ebook with a table of contents. Coming soon.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+<div class="toast" id="toast" hidden><span id="toastMsg"></span><button id="toastBtn" hidden></button></div>
+<div class="modal" id="modal" hidden><div class="box"><h3 id="mTitle"></h3><p id="mMsg"></p><div class="btns" id="mBtns"></div></div></div>
+
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var editor = $('editor'), scroller = $('scroll'), layout = $('layout');
+  var KEY = 'novel-writer-draft', DKEY = 'novel-writer-notes';
+
+  function load(k, d) { try { var v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } }
+  function save(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+  /* ================= saved data (notes live apart from the story text) ================= */
+  var LISTS = ['characters', 'locations', 'timeline', 'ideas', 'themes', 'fixlater', 'cuts'];
+  var data = (function () {
+    var d = {};
+    try { d = JSON.parse(load(DKEY, '{}')) || {}; } catch (e) { d = {}; }
+    LISTS.forEach(function (k) { if (!Array.isArray(d[k])) d[k] = []; });
+    if (!d.chapterNotes || typeof d.chapterNotes !== 'object') d.chapterNotes = {};
+    return d;
+  })();
+
+  var K_ON = 'novel-writer-drive-on', K_FILE = 'novel-writer-drive-file', K_MOD = 'novel-writer-drive-mod',
+      K_DIRTY = 'novel-writer-dirty', K_CID = 'novel-writer-gclient';
+  var saveTimer, rev = 0;
+  function dirty() {
+    rev++;
+    save(K_DIRTY, '1');
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(flush, 400);
+    if (load(K_ON, '') === '1') syncSoon();
+  }
+  function flush() { save(KEY, editor.innerHTML); save(DKEY, JSON.stringify(data)); }
+  document.addEventListener('visibilitychange', function () { if (document.hidden) flush(); });
+  window.addEventListener('pagehide', flush);
+
+  /* ================= writing tab ================= */
+  try { document.execCommand('defaultParagraphSeparator', false, 'p'); } catch (e) {}
+
+  var saved = load(KEY, '');
+  if (saved) editor.innerHTML = saved;
+  normalize();
+
+  function normalize() {
+    Array.prototype.forEach.call(editor.querySelectorAll('.scene-break'), function (el) {
+      el.textContent = '';
+      el.setAttribute('contenteditable', 'false');
+    });
+    Array.prototype.forEach.call(editor.querySelectorAll('.part'), fixPart);
+    cleanEmpties();
+    assignIds();
+    ensureContent();
+  }
+  // no blank lines in the manuscript: spacing comes from the buttons, not from empty paragraphs
+  function cleanEmpties() {
+    Array.prototype.slice.call(editor.children).forEach(function (el) {
+      if (isEmptyP(el) && el !== editor.lastElementChild) el.remove();
+    });
+  }
+  function fixPart(d) {
+    var t = d.querySelector('.part-title'), s = d.querySelector('.part-sub');
+    var tt = t ? t.textContent.trim() : '', st = s ? s.textContent.trim() : '';
+    d.setAttribute('contenteditable', 'false');
+    d.innerHTML = '<button class="part-x" title="Remove this part page" aria-label="Remove this part page"></button>' +
+      '<div class="part-title" contenteditable="true" data-ph="Part title"></div>' +
+      '<div class="part-sub" contenteditable="true" data-ph="Subtitle (optional)"></div>';
+    d.querySelector('.part-title').textContent = tt;
+    d.querySelector('.part-sub').textContent = st;
+  }
+  function makePart() {
+    var d = document.createElement('div');
+    d.className = 'part';
+    fixPart(d);
+    return d;
+  }
+  function assignIds() {
+    var seen = {};
+    Array.prototype.forEach.call(editor.querySelectorAll('h2.chapter'), function (h2) {
+      if (!h2.dataset.id || seen[h2.dataset.id]) h2.dataset.id = uid();
+      seen[h2.dataset.id] = 1;
+    });
+  }
+  function ensureContent() {
+    var last = editor.lastElementChild;
+    if (!last || last.nodeName !== 'P') {
+      var p = document.createElement('p');
+      p.innerHTML = '<br>';
+      editor.appendChild(p);
+    }
+  }
+  function isEmptyP(el) { return el && el.nodeName === 'P' && el.textContent.trim() === ''; }
+
+  var navTimer;
+  function changed(now) {
+    updateCount();
+    dirty();
+    if (now) commitHistory(); else scheduleHistory();
+    clearTimeout(navTimer);
+    navTimer = setTimeout(buildNav, 200);
+  }
+
+  /* ---- undo / redo: a list of snapshots of the page, with the cursor position ---- */
+  var hist = [], hi = -1, histTimer = null;
+  function pathOf(node) {
+    var p = [];
+    while (node && node !== editor) {
+      var par = node.parentNode;
+      if (!par) return null;
+      p.unshift(Array.prototype.indexOf.call(par.childNodes, node));
+      node = par;
+    }
+    return node === editor ? p : null;
+  }
+  function nodeAt(p) {
+    var n = editor;
+    for (var i = 0; i < p.length; i++) { n = n.childNodes[p[i]]; if (!n) return null; }
+    return n;
+  }
+  function nodeLen(n) { return n.nodeType === 3 ? n.length : n.childNodes.length; }
+  function getSel() {
+    var s = window.getSelection();
+    if (!s.rangeCount || !editor.contains(s.anchorNode) || !editor.contains(s.focusNode)) return null;
+    var a = pathOf(s.anchorNode), f = pathOf(s.focusNode);
+    return a && f ? { a: a, ao: s.anchorOffset, f: f, fo: s.focusOffset } : null;
+  }
+  function setSel(st) {
+    if (!st) return;
+    try {
+      var a = nodeAt(st.a), f = nodeAt(st.f);
+      if (!a || !f) return;
+      window.getSelection().setBaseAndExtent(a, Math.min(st.ao, nodeLen(a)), f, Math.min(st.fo, nodeLen(f)));
+      var el = f.nodeType === 3 ? f.parentNode : f;
+      if (el && el.scrollIntoView) el.scrollIntoView({ block: 'nearest' });
+    } catch (e) {}
+  }
+  function snap() { return { html: editor.innerHTML, sel: getSel() }; }
+  function updateUndoUI() {
+    $('btnUndo').disabled = !(hi > 0 || histTimer);
+    $('btnRedo').disabled = !(hi < hist.length - 1);
+  }
+  function resetHistory() {
+    clearTimeout(histTimer); histTimer = null;
+    hist = [snap()]; hi = 0;
+    updateUndoUI();
+  }
+  function scheduleHistory() {
+    clearTimeout(histTimer);
+    histTimer = setTimeout(commitHistory, 600);
+    updateUndoUI();
+  }
+  function commitHistory() {
+    clearTimeout(histTimer); histTimer = null;
+    var st = snap();
+    if (hist[hi] && hist[hi].html === st.html) { updateUndoUI(); return; }
+    hist.length = hi + 1;
+    hist.push(st); hi++;
+    var total = hist.reduce(function (n, h) { return n + h.html.length; }, 0);
+    while (hist.length > 1 && (hist.length > 150 || total > 60e6)) { total -= hist[0].html.length; hist.shift(); hi--; }
+    updateUndoUI();
+  }
+  function restoreState(st) {
+    clearTimeout(histTimer); histTimer = null;
+    editor.innerHTML = st.html;
+    normalize();
+    st.html = editor.innerHTML;
+    editor.focus({ preventScroll: true });
+    setSel(st.sel);
+    updateCount(); dirty(); buildNav(); hideToast();
+    curCh = undefined; refreshPanel();
+    updateUndoUI();
+  }
+  function undo() { commitHistory(); if (hi <= 0) return; hi--; restoreState(hist[hi]); }
+  function redo() { if (hi >= hist.length - 1) return; hi++; restoreState(hist[hi]); }
+  function updateCount() {
+    var t = editor.innerText.trim();
+    var n = t ? t.split(/\s+/).length : 0;
+    $('count').textContent = n.toLocaleString() + ' words';
+  }
+  editor.addEventListener('input', function (e) {
+    var f = e.target;
+    if (f.matches && f.matches('.part-title,.part-sub') && !f.textContent.trim()) f.innerHTML = '';
+    hideToast();
+    assignIds(); ensureContent(); changed();
+  });
+
+  function blockOf(node) {
+    while (node && node.parentNode !== editor) node = node.parentNode;
+    return node;
+  }
+  function getRange() {
+    var sel = window.getSelection();
+    if (sel.rangeCount) {
+      var r = sel.getRangeAt(0);
+      if (editor.contains(r.endContainer) && r.endContainer !== editor) return r;
+    }
+    var r2 = document.createRange();
+    r2.selectNodeContents(editor.lastElementChild);
+    r2.collapse(false);
+    return r2;
+  }
+  function placeCursorIn(el) {
+    if (el.classList && el.classList.contains('part')) el = el.querySelector('.part-title');
+    var r = document.createRange();
+    r.selectNodeContents(el);
+    r.collapse(true);
+    var s = window.getSelection();
+    s.removeAllRanges(); s.addRange(r);
+    if (el.scrollIntoView) el.scrollIntoView({ block: 'nearest' });
+  }
+
+  /* Puts a chapter heading or scene break at the cursor with consistent spacing. */
+  function insertBlock(el, needText) {
+    commitHistory();
+    editor.focus();
+    var range = getRange();
+    var block = blockOf(range.endContainer);
+    if (!block || block.nodeName !== 'P') return null;
+
+    var pre = document.createRange();
+    pre.setStart(block, 0);
+    pre.setEnd(range.endContainer, range.endOffset);
+    var textBefore = pre.toString().trim() !== '';
+    if (needText) {
+      var prev = block.previousElementSibling;
+      while (prev && isEmptyP(prev)) prev = prev.previousElementSibling;
+      if (!textBefore && !(prev && prev.nodeName === 'P')) return null;
+    }
+
+    var tail = document.createRange();
+    tail.setStart(range.endContainer, range.endOffset);
+    tail.setEnd(block, block.childNodes.length);
+    var rest = document.createElement('p');
+    rest.appendChild(tail.extractContents());
+    var restEmpty = rest.textContent.trim() === '';
+    if (restEmpty) rest.innerHTML = '<br>';
+
+    var after = block.nextElementSibling;
+    var before = block;
+    if (!textBefore) { var pv = block.previousElementSibling; block.remove(); before = pv; }
+    while (before && isEmptyP(before)) { var pv2 = before.previousElementSibling; before.remove(); before = pv2; }
+
+    var useRest = true;
+    if (restEmpty) {
+      while (after && isEmptyP(after)) { var nx = after.nextElementSibling; after.remove(); after = nx; }
+      if (after && after.nodeName === 'P') useRest = false;
+    }
+    editor.insertBefore(el, after);
+    if (useRest) editor.insertBefore(rest, after);
+
+    return (el.nodeName === 'H2' || el.classList.contains('part')) ? el : (useRest ? rest : after);
+  }
+
+  // keep the cursor in the page when tapping these buttons (iPhone/iPad)
+  Array.prototype.forEach.call(document.querySelectorAll('.keep'), function (b) {
+    b.addEventListener('mousedown', function (e) { e.preventDefault(); });
+    b.addEventListener('touchstart', function (e) { e.preventDefault(); b.click(); }, { passive: false });
+  });
+
+  $('btnChapter').onclick = function () {
+    var h2 = document.createElement('h2');
+    h2.className = 'chapter';
+    h2.dataset.id = uid();
+    h2.innerHTML = '<br>';
+    var target = insertBlock(h2, false);
+    if (target) { placeCursorIn(target); changed(true); buildNav(); }
+    else toast('Click inside a paragraph where this should go.', null, null, 3500);
+  };
+  $('btnScene').onclick = function () {
+    var d = document.createElement('div');
+    d.className = 'scene-break';
+    d.setAttribute('contenteditable', 'false');
+    var target = insertBlock(d, true);
+    if (target) { placeCursorIn(target); changed(true); buildNav(); }
+    else toast('Click inside a paragraph where this should go.', null, null, 3500);
+  };
+  $('btnItalic').onclick = function () {
+    editor.focus(); document.execCommand('italic'); changed();
+  };
+  $('btnPart').onclick = function () {
+    var target = insertBlock(makePart(), false);
+    if (target) { placeCursorIn(target); changed(true); buildNav(); }
+    else toast('Click inside a paragraph where this should go.', null, null, 3500);
+  };
+
+  // remove a part page with its x button
+  editor.addEventListener('mousedown', function (e) { if (e.target.closest && e.target.closest('.part-x')) e.preventDefault(); });
+  editor.addEventListener('click', function (e) {
+    var x = e.target.closest && e.target.closest('.part-x');
+    if (!x) return;
+    var part = x.parentNode;
+    if (part.textContent.trim() && !confirm('Remove this part page?')) return;
+    part.remove(); ensureContent(); changed(true); buildNav();
+  });
+
+  /* ---- toast (with optional Undo) ---- */
+  var toastTimer;
+  function hideToast() { $('toast').hidden = true; clearTimeout(toastTimer); }
+  function toast(msg, label, fn, ms) {
+    $('toastMsg').textContent = msg;
+    var b = $('toastBtn');
+    b.hidden = !label; b.textContent = label || '';
+    b.onclick = function () { hideToast(); if (fn) fn(); };
+    $('toast').hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(hideToast, ms || 15000);
+  }
+
+  /* ---- Move to Cut Scenes ---- */
+  function rangeText(range) {
+    var out = [], loose = '';
+    Array.prototype.forEach.call(range.cloneContents().childNodes, function (n) {
+      if (n.nodeType === 1 && /^(P|H2|DIV)$/.test(n.nodeName)) {
+        if (loose.trim()) { out.push(loose.trim()); loose = ''; }
+        if (n.classList.contains('scene-break')) out.push('* * *');
+        else if (!n.classList.contains('part') && n.textContent.trim()) out.push(n.textContent.trim());
+      } else loose += n.textContent;
+    });
+    if (loose.trim()) out.push(loose.trim());
+    return out.join('\n\n');
+  }
+  $('btnCuts').onclick = function () {
+    var sel = window.getSelection();
+    if (!sel.rangeCount || sel.isCollapsed || !editor.contains(sel.anchorNode)) {
+      toast('Highlight the text you want to move first.', null, null, 3500); return;
+    }
+    var range = sel.getRangeAt(0);
+    var text = rangeText(range);
+    if (!text.trim()) { toast('Highlight the text you want to move first.', null, null, 3500); return; }
+    var h2 = blockOf(range.startContainer);
+    while (h2 && h2.nodeName !== 'H2') h2 = h2.previousElementSibling;
+    var from = 'Opening';
+    if (h2) {
+      var n = Array.prototype.indexOf.call(editor.querySelectorAll('h2.chapter'), h2) + 1;
+      var t = h2.textContent.trim();
+      from = 'Chapter ' + n + (t ? ': ' + t : '');
+    }
+    commitHistory();
+    var snapshot = editor.innerHTML;
+    document.execCommand('delete');
+    var cb = blockOf(window.getSelection().anchorNode);
+    if (cb && isEmptyP(cb) && cb.nextElementSibling) {
+      var nx = cb.nextElementSibling; cb.remove();
+      if (nx.nodeName === 'P' || nx.nodeName === 'H2') placeCursorIn(nx);
+    }
+    var item = { id: uid(), name: '', from: from, text: text };
+    data.cuts.push(item);
+    assignIds(); ensureContent(); dirty(); changed(true); buildNav();
+    toast('Moved to Cut Scenes', 'Undo', function () {
+      editor.innerHTML = snapshot;
+      normalize();
+      data.cuts = data.cuts.filter(function (c) { return c.id !== item.id; });
+      dirty(); changed(true); buildNav();
+    });
+  };
+
+  editor.addEventListener('keydown', function (e) {
+    if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+    var k = e.key.toLowerCase();
+    if (k === 'z') { e.preventDefault(); if (e.shiftKey) redo(); else undo(); }
+    else if (k === 'y' && e.ctrlKey) { e.preventDefault(); redo(); }
+  });
+  $('btnUndo').onclick = undo;
+  $('btnRedo').onclick = redo;
+
+  // Return never leaves a blank line: on an empty line (or at the very start of a paragraph) it just stays put.
+  editor.addEventListener('beforeinput', function (e) {
+    if (e.inputType === 'historyUndo') { e.preventDefault(); undo(); return; }
+    if (e.inputType === 'historyRedo') { e.preventDefault(); redo(); return; }
+    if (e.inputType === 'insertLineBreak') { e.preventDefault(); return; }
+    if (e.inputType !== 'insertParagraph') return;
+    var sel = window.getSelection();
+    if (!sel.rangeCount) return;
+    var node = sel.anchorNode;
+    var el = node && (node.nodeType === 1 ? node : node.parentNode);
+    var field = el && el.closest ? el.closest('.part-title,.part-sub') : null;
+    if (field) {
+      e.preventDefault();
+      if (field.classList.contains('part-title')) placeCursorIn(field.parentNode.querySelector('.part-sub'));
+      else {
+        var nx = field.parentNode.nextElementSibling;
+        if (!nx || nx.nodeName !== 'P') { var np = document.createElement('p'); np.innerHTML = '<br>'; editor.insertBefore(np, nx); nx = np; }
+        placeCursorIn(nx);
+      }
+      return;
+    }
+    var b = blockOf(node);
+    if (!b) return;
+    if (b.nodeName === 'H2') {
+      e.preventDefault();
+      var next = b.nextElementSibling;
+      if (next && next.nodeName === 'P') placeCursorIn(next);
+      else {
+        var p = document.createElement('p');
+        p.innerHTML = '<br>';
+        editor.insertBefore(p, next);
+        placeCursorIn(p);
+      }
+      return;
+    }
+    if (b.nodeName === 'P' && sel.isCollapsed) {
+      var pre = document.createRange();
+      pre.setStart(b, 0);
+      pre.setEnd(sel.anchorNode, sel.anchorOffset);
+      if (pre.toString().trim() === '') e.preventDefault();
+    }
+  });
+
+  editor.addEventListener('paste', function (e) {
+    e.preventDefault();
+    var text = (e.clipboardData || window.clipboardData).getData('text/plain');
+    if (e.target.closest && e.target.closest('.part')) {
+      document.execCommand('insertText', false, text.replace(/\s*\n+\s*/g, ' ').trim());
+      return;
+    }
+    var lines = text.replace(/\r/g, '').split('\n').filter(function (l) { return l.trim() !== ''; });
+    lines.forEach(function (line, i) {
+      if (i > 0) document.execCommand('insertParagraph');
+      document.execCommand('insertText', false, line.trim());
+    });
+  });
+
+  /* ---- contents list ---- */
+  var navList = $('navList');
+  var navTargets = [];
+  function addNavItem(label, cls, el, align) {
+    var b = document.createElement('button');
+    b.className = 'nav-item ' + cls;
+    b.textContent = label;
+    b.title = label;
+    b.onclick = function () {
+      el.scrollIntoView({ behavior: 'smooth', block: align });
+      if (window.innerWidth <= 700) closePanels();
+    };
+    navList.appendChild(b);
+    navTargets.push({ el: el, btn: b });
+  }
+  function buildNav() {
+    navList.innerHTML = '';
+    navTargets = [];
+    var ch = 0, br = 0, hasOpening = false, hasPart = false;
+    Array.prototype.forEach.call(editor.children, function (el) {
+      if (el.nodeName === 'H2') {
+        ch++; br = 0;
+        var t = el.textContent.trim();
+        var hasNote = (data.chapterNotes[el.dataset.id] || '').trim() !== '';
+        addNavItem('Chapter ' + ch + (t ? ': ' + t : '') + (hasNote ? '  •' : ''), 'chapter', el, 'start');
+      } else if (el.classList.contains('part')) {
+        br = 0; hasPart = true;
+        var pt = (el.querySelector('.part-title') || {}).textContent || '';
+        addNavItem('Part' + (pt.trim() ? ': ' + pt.trim() : ' (untitled)'), 'chapter part-i', el, 'start');
+      } else if (el.classList.contains('scene-break')) {
+        if (ch === 0 && !hasOpening && !hasPart) { addNavItem('Opening', 'chapter', editor, 'start'); hasOpening = true; }
+        br++;
+        addNavItem('Break ' + br, 'sub', el, 'center');
+      }
+    });
+    if (!navTargets.length) {
+      var d = document.createElement('div');
+      d.className = 'nav-empty';
+      d.textContent = 'No chapters yet.';
+      navList.appendChild(d);
+    }
+    updateActive();
+  }
+  function updateActive() {
+    var top = scroller.getBoundingClientRect().top + 80, cur = null;
+    navTargets.forEach(function (t) { if (t.el.getBoundingClientRect().top <= top) cur = t; });
+    navTargets.forEach(function (t) { t.btn.classList.toggle('active', t === cur); });
+  }
+
+  /* ---- chapter notes panel ---- */
+  var cnText = $('cnText'), cnTitle = $('cnTitle'), curCh = null, lastH2 = null;
+  function detectChapter() {
+    var sel = window.getSelection();
+    if (editor.contains(document.activeElement) && sel.rangeCount && editor.contains(sel.anchorNode)) {
+      var b = blockOf(sel.anchorNode);
+      while (b && b.nodeName !== 'H2') b = b.previousElementSibling;
+      if (b) lastH2 = b;
+      return b;
+    }
+    var top = scroller.getBoundingClientRect().top + 80, cur = null;
+    Array.prototype.forEach.call(editor.querySelectorAll('h2.chapter'), function (h2) {
+      if (h2.getBoundingClientRect().top <= top) cur = h2;
+    });
+    if (!cur && lastH2 && editor.contains(lastH2)) cur = lastH2;
+    return cur;
+  }
+  function refreshPanel() {
+    if (!layout.classList.contains('notes-open') || document.activeElement === cnText) return;
+    var h2 = detectChapter();
+    var id = h2 ? h2.dataset.id : null;
+    if (h2) {
+      var n = Array.prototype.indexOf.call(editor.querySelectorAll('h2.chapter'), h2) + 1;
+      var t = h2.textContent.trim();
+      cnTitle.textContent = 'Chapter ' + n + (t ? ': ' + t : '');
+    } else cnTitle.textContent = 'No chapter yet';
+    cnText.disabled = !id;
+    cnText.placeholder = id ? 'Notes for this chapter…' : 'Add a chapter first. Its notes will live here.';
+    if (id !== curCh) { curCh = id; cnText.value = id ? (data.chapterNotes[id] || '') : ''; }
+  }
+  cnText.addEventListener('input', function () {
+    if (!curCh) return;
+    var v = cnText.value;
+    if (v.trim()) data.chapterNotes[curCh] = v; else delete data.chapterNotes[curCh];
+    dirty();
+    clearTimeout(navTimer);
+    navTimer = setTimeout(buildNav, 400);
+  });
+
+  var tick = false;
+  function schedule() {
+    if (tick) return;
+    tick = true;
+    requestAnimationFrame(function () { tick = false; if (editor.contains(document.activeElement)) detectChapter(); updateActive(); refreshPanel(); });
+  }
+  scroller.addEventListener('scroll', schedule);
+  document.addEventListener('selectionchange', function () {
+    if (editor.contains(document.activeElement)) schedule();
+  });
+
+  function closePanels() { layout.classList.remove('nav-open', 'notes-open'); }
+  $('btnNav').onclick = function () {
+    var open = !layout.classList.contains('nav-open');
+    if (window.innerWidth <= 700) layout.classList.remove('notes-open');
+    layout.classList.toggle('nav-open', open);
+  };
+  $('btnCNotes').onclick = function () {
+    var open = !layout.classList.contains('notes-open');
+    if (window.innerWidth <= 700) layout.classList.remove('nav-open');
+    layout.classList.toggle('notes-open', open);
+    if (open) { curCh = undefined; refreshPanel(); }
+  };
+  $('cnClose').onclick = function () { layout.classList.remove('notes-open'); };
+  $('backdrop').onclick = closePanels;
+  if (window.innerWidth > 700) layout.classList.add('nav-open');
+
+  /* ================= notes tab ================= */
+  var SECTIONS = [
+    { key: 'characters', title: 'Characters', blurb: 'Who they are and how they change' },
+    { key: 'locations', title: 'Locations', blurb: 'Places in your story' },
+    { key: 'timeline', title: 'Timeline', blurb: 'Events in story order' },
+    { key: 'ideas', title: 'Ideas', blurb: 'Quick capture for anything' },
+    { key: 'themes', title: 'Themes', blurb: 'What the book is really about' },
+    { key: 'fixlater', title: 'Fix Later', blurb: 'Continuity checks and to-dos' },
+    { key: 'cuts', title: 'Cut Scenes', blurb: 'Deleted passages, kept safe' }
+  ];
+  var notesRoot = $('notesRoot'), notesTab = $('tab-notes'), view = null;
+
+  function h(tag, props, kids) {
+    var el = document.createElement(tag);
+    props = props || {};
+    Object.keys(props).forEach(function (k) {
+      var v = props[k];
+      if (k === 'class') el.className = v;
+      else if (k === 'text') el.textContent = v;
+      else if (k.slice(0, 2) === 'on') el.addEventListener(k.slice(2), v);
+      else el.setAttribute(k, v);
+    });
+    (kids || []).forEach(function (c) { if (c) el.appendChild(c); });
+    return el;
+  }
+  function autosize(el) {
+    el.style.height = 'auto';
+    if (el.scrollHeight) el.style.height = (el.scrollHeight + 2) + 'px';
+  }
+  function field(s, item) {
+    var el = h(s.m ? 'textarea' : 'input', { class: 'f' + (s.big ? ' big' : ''), placeholder: s.ph || '', spellcheck: 'true' });
+    if (s.m) el.rows = 1; else el.type = 'text';
+    el.value = item[s.p] || '';
+    el.addEventListener('input', function () { item[s.p] = el.value; dirty(); if (s.m) autosize(el); });
+    return h('label', { class: 'fld' }, [s.l ? h('span', { text: s.l }) : null, el]);
+  }
+  function fieldsFrom(item, spec) {
+    var out = [], row = null;
+    spec.forEach(function (s) {
+      var f = field(s, item);
+      if (s.half) {
+        if (!row) { row = h('div', { class: 'two' }); out.push(row); }
+        row.appendChild(f);
+      } else { row = null; out.push(f); }
+    });
+    return out;
+  }
+  function hasContent(item) {
+    return Object.keys(item).some(function (k) { return k !== 'id' && k !== 'done' && String(item[k] || '').trim(); });
+  }
+  function removeItem(key, item) {
+    data[key] = data[key].filter(function (i) { return i.id !== item.id; });
+    dirty(); rerender();
+  }
+  function card(item, key, kids) {
+    var del = h('button', { class: 'x', title: 'Delete', 'aria-label': 'Delete', text: '×', onclick: function () {
+      if (hasContent(item) && !confirm('Delete this entry?')) return;
+      removeItem(key, item);
+    } });
+    return h('div', { class: 'card', 'data-id': item.id }, [del].concat(kids));
+  }
+  function addTile(key, label, spec, extra) {
+    return h('button', { class: 'add-tile', text: '+ ' + label, onclick: function () {
+      var it = { id: uid() }; data[key].push(it); dirty(); rerender(it.id);
+    } });
+  }
+  function renderCards(box, key, spec, label, extra) {
+    var grid = h('div', { class: 'cards' });
+    data[key].forEach(function (it) {
+      grid.appendChild(card(it, key, fieldsFrom(it, spec).concat(extra ? [extra(it)] : [])));
+    });
+    grid.appendChild(addTile(key, label));
+    box.appendChild(grid);
+  }
+  function copyText(t, btn) {
+    try { if (navigator.clipboard) navigator.clipboard.writeText(t).catch(function () {}); } catch (e) {}
+    var old = btn.textContent; btn.textContent = 'Copied';
+    setTimeout(function () { btn.textContent = old; }, 1200);
+  }
+
+  var SPEC = {
+    characters: [
+      { p: 'name', l: 'Name', ph: 'Character name', big: true },
+      { p: 'desc', l: 'Description', m: true },
+      { p: 'start', l: 'Starts as', m: true, half: true },
+      { p: 'end', l: 'Ends as', m: true, half: true },
+      { p: 'arc', l: 'Arc notes', m: true }
+    ],
+    locations: [
+      { p: 'name', l: 'Name', ph: 'Place name', big: true },
+      { p: 'desc', l: 'Description', m: true }
+    ],
+    themes: [
+      { p: 'name', l: 'Theme', ph: 'e.g. Loyalty vs. survival', big: true },
+      { p: 'desc', l: 'How it shows up', m: true }
+    ],
+    cuts: [
+      { p: 'name', l: 'Title', ph: 'Name this passage', big: true },
+      { p: 'from', l: 'Cut from', ph: 'e.g. Chapter 4' },
+      { p: 'text', l: 'Passage', m: true }
+    ],
+    timeline: [
+      { p: 'when', l: 'When', ph: 'e.g. Year 3, spring' },
+      { p: 'name', l: 'Event', ph: 'What happens', big: true },
+      { p: 'desc', l: 'Details', m: true }
+    ]
+  };
+
+  function renderTimeline(box) {
+    var wrap = h('div', { class: 'tl' });
+    function slot(i, isEnd) {
+      var b = h('button', { class: 'plus', title: 'Add an event here', 'aria-label': 'Add an event here', text: '+', onclick: function () {
+        var ev = { id: uid() }; data.timeline.splice(i, 0, ev); dirty(); rerender(ev.id);
+      } });
+      var kids = [b];
+      if (isEnd && !data.timeline.length) kids.push(h('span', { class: 'hint', text: 'Add the first event' }));
+      return h('div', { class: 'tl-row slot' + (isEnd ? ' end' : '') }, kids);
+    }
+    data.timeline.forEach(function (ev, i) {
+      wrap.appendChild(slot(i, false));
+      wrap.appendChild(h('div', { class: 'tl-row ev' }, [h('span', { class: 'dot' }), card(ev, 'timeline', fieldsFrom(ev, SPEC.timeline))]));
+    });
+    wrap.appendChild(slot(data.timeline.length, true));
+    box.appendChild(wrap);
+  }
+
+  function quickAdd(box, placeholder, onAdd) {
+    var input = h('input', { class: 'quick', placeholder: placeholder, spellcheck: 'true' });
+    input.type = 'text';
+    function add() {
+      var t = input.value.trim();
+      if (!t) return;
+      onAdd(t); dirty(); rerender();
+      var q = notesRoot.querySelector('.quick'); if (q) q.focus();
+    }
+    input.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); add(); } });
+    box.appendChild(h('div', { class: 'quick-row' }, [input, h('button', { class: 'btn', text: 'Add', onclick: add })]));
+  }
+
+  function renderIdeas(box) {
+    quickAdd(box, 'Jot down an idea and press Enter', function (t) { data.ideas.unshift({ id: uid(), text: t }); });
+    var wall = h('div', { class: 'wall' });
+    data.ideas.forEach(function (it) { wall.appendChild(card(it, 'ideas', [field({ p: 'text', m: true }, it)])); });
+    box.appendChild(wall);
+  }
+
+  function renderFix(box) {
+    quickAdd(box, 'Something to fix later, then press Enter', function (t) { data.fixlater.unshift({ id: uid(), text: t, done: false }); });
+    var open = data.fixlater.filter(function (i) { return !i.done; }).length;
+    var doneCount = data.fixlater.length - open;
+    var meta = h('p', { class: 'meta', text: open + ' open' + (doneCount ? ' · ' + doneCount + ' done' : '') + ' ' });
+    if (doneCount) meta.appendChild(h('button', { class: 'small', text: 'Clear completed', onclick: function () {
+      data.fixlater = data.fixlater.filter(function (i) { return !i.done; }); dirty(); rerender();
+    } }));
+    box.appendChild(meta);
+    var list = h('div', { class: 'checks' });
+    data.fixlater.forEach(function (it) {
+      var cb = h('input', { type: 'checkbox', 'aria-label': 'Done' }); cb.checked = !!it.done;
+      cb.addEventListener('change', function () { it.done = cb.checked; dirty(); rerender(); });
+      var tx = h('input', { class: 'f', spellcheck: 'true' }); tx.type = 'text'; tx.value = it.text || '';
+      tx.addEventListener('input', function () { it.text = tx.value; dirty(); });
+      var del = h('button', { class: 'x', title: 'Delete', 'aria-label': 'Delete', text: '×', onclick: function () { removeItem('fixlater', it); } });
+      list.appendChild(h('div', { class: 'check' + (it.done ? ' done' : ''), 'data-id': it.id }, [cb, tx, del]));
+    });
+    box.appendChild(list);
+  }
+
+  var RENDER = {
+    characters: function (b) { renderCards(b, 'characters', SPEC.characters, 'New character'); },
+    locations: function (b) { renderCards(b, 'locations', SPEC.locations, 'New location'); },
+    themes: function (b) { renderCards(b, 'themes', SPEC.themes, 'New theme'); },
+    cuts: function (b) {
+      renderCards(b, 'cuts', SPEC.cuts, 'New cut scene', function (it) {
+        var btn = h('button', { class: 'small', text: 'Copy text' });
+        btn.addEventListener('click', function () { copyText(it.text || '', btn); });
+        return h('div', { class: 'card-foot' }, [btn]);
+      });
+    },
+    timeline: renderTimeline, ideas: renderIdeas, fixlater: renderFix
+  };
+
+  function rerender(focusId) {
+    var st = notesTab.scrollTop;
+    notesRoot.innerHTML = '';
+    if (!view) {
+      notesRoot.appendChild(h('h1', { class: 'pg-title', text: 'Notes' }));
+      var grid = h('div', { class: 'tiles' });
+      SECTIONS.forEach(function (s) {
+        var n = data[s.key].length;
+        grid.appendChild(h('button', { class: 'tile', onclick: function () { view = s.key; rerender(); notesTab.scrollTop = 0; } }, [
+          h('strong', { text: s.title }),
+          h('span', { class: 'blurb', text: s.blurb }),
+          h('span', { class: 'count', text: n + (n === 1 ? ' entry' : ' entries') })
+        ]));
+      });
+      notesRoot.appendChild(grid);
+    } else {
+      var def = SECTIONS.filter(function (s) { return s.key === view; })[0];
+      notesRoot.appendChild(h('div', { class: 'sec-head' }, [
+        h('button', { class: 'small', text: '← Notes', onclick: function () { view = null; rerender(); notesTab.scrollTop = 0; } }),
+        h('h1', { text: def.title })
+      ]));
+      notesRoot.appendChild(h('p', { class: 'meta', text: def.blurb }));
+      var body = h('div');
+      notesRoot.appendChild(body);
+      RENDER[view](body);
+      Array.prototype.forEach.call(notesRoot.querySelectorAll('textarea'), autosize);
+    }
+    notesTab.scrollTop = st;
+    if (focusId) {
+      var el = notesRoot.querySelector('[data-id="' + focusId + '"] .f');
+      if (el) { el.focus(); el.scrollIntoView({ block: 'center' }); }
+    }
+  }
+
+  /* ================= import / export ================= */
+  function impMsg(text, isErr) { var m = $('impMsg'); m.textContent = text || ''; m.className = 'io-msg' + (isErr ? ' err' : ''); }
+  function validBook(p) { return p && typeof p.draft === 'string' && p.notes && typeof p.notes === 'object'; }
+
+  async function importBook(p) {
+    if (!validBook(p)) { impMsg('That file is not a Novel Writer book file.', true); return; }
+    if (!isEmptyLocal()) {
+      var c = await askChoice('Replace the book on this device?',
+        'The imported book will replace the one on this device. You can undo it right afterwards.',
+        [['Cancel', 'no'], ['Replace', 'yes']]);
+      if (c !== 'yes') return;
+    }
+    var prev = payload();
+    applyPayload(p);
+    dirty();
+    impMsg('');
+    showTab('writing');
+    scroller.scrollTop = 0;
+    toast('Book imported', 'Undo', function () { applyPayload(JSON.parse(prev)); dirty(); }, 30000);
+  }
+  function readLocalFile(file) {
+    var fr = new FileReader();
+    fr.onload = function () {
+      var p;
+      try { p = JSON.parse(fr.result); } catch (e) { impMsg('That file could not be read. Is it a Novel Writer book file (.json)?', true); return; }
+      importBook(p);
+    };
+    fr.readAsText(file);
+  }
+  $('impFile').onchange = function () { if (this.files[0]) readLocalFile(this.files[0]); this.value = ''; };
+  var drop = $('drop');
+  ['dragenter', 'dragover'].forEach(function (t) { drop.addEventListener(t, function (e) { e.preventDefault(); drop.classList.add('over'); }); });
+  ['dragleave', 'drop'].forEach(function (t) { drop.addEventListener(t, function (e) { e.preventDefault(); drop.classList.remove('over'); }); });
+  drop.addEventListener('drop', function (e) { var f = e.dataTransfer && e.dataTransfer.files[0]; if (f) readLocalFile(f); });
+
+  function updateImportUI() {
+    var on = driveOn();
+    $('impDriveNote').textContent = on
+      ? 'Find the book (and any backups) saved in your Google Drive.'
+      : 'Connect Google Drive in Settings first, then come back here.';
+    $('impDriveBtn').textContent = on ? 'Look in Google Drive' : 'Open Settings';
+  }
+  $('impDriveBtn').onclick = async function (e) {
+    e.stopPropagation();
+    if (!driveOn()) { panel.classList.add('open'); return; }
+    var list = $('impDriveList'); list.innerHTML = '';
+    impMsg('Looking in Google Drive\u2026');
+    try {
+      await getToken(true);
+      var q = "mimeType='application/json' and trashed=false";
+      var l = await drive(API + 'files?q=' + encodeURIComponent(q) + '&orderBy=' + encodeURIComponent('modifiedTime desc') + '&pageSize=50&fields=' + encodeURIComponent('files(id,name,modifiedTime)'));
+      var files = (l.files || []).filter(function (f) { return /^novel-writer.*\.json$/.test(f.name); });
+      if (!files.length) { impMsg('No book files found in your Google Drive yet.'); return; }
+      impMsg('');
+      files.forEach(function (f) {
+        var isMain = f.name === FILE_NAME;
+        var row = h('div', { class: 'file-row' }, [
+          h('div', { class: 'fi' }, [
+            h('strong', { text: isMain ? 'Your book in Drive' : 'Backup' }),
+            h('span', { text: new Date(f.modifiedTime).toLocaleString() + (isMain ? '' : ' \u00b7 ' + f.name) })
+          ]),
+          h('button', { class: 'btn', text: 'Import', onclick: async function () {
+            try { impMsg('Downloading\u2026'); importBook(await readFile(f.id)); }
+            catch (err) { impMsg(err.message, true); }
+          } })
+        ]);
+        list.appendChild(row);
+      });
+    } catch (err) { impMsg(err.message, true); }
+  };
+
+  function updateExportStats() {
+    var t = editor.innerText.trim();
+    var words = t ? t.split(/\s+/).length : 0;
+    var ch = editor.querySelectorAll('h2.chapter').length, pt = editor.querySelectorAll('.part').length;
+    $('expStats').textContent = 'Your book: ' + words.toLocaleString() + ' words \u00b7 ' + ch + (ch === 1 ? ' chapter' : ' chapters') +
+      (pt ? ' \u00b7 ' + pt + (pt === 1 ? ' part page' : ' part pages') : '');
+  }
+  $('expJson').onclick = function () {
+    flush();
+    var blob = new Blob([payload()], { type: 'application/json' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'novel-writer-' + new Date().toISOString().slice(0, 10) + '.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 3000);
+    $('expMsg').textContent = 'Downloaded ' + a.download + '. Keep it somewhere safe.';
+  };
+
+  /* ================= tabs, save, settings ================= */
+  var TABS = ['import', 'writing', 'notes', 'export'];
+  function showTab(name) {
+    if (TABS.indexOf(name) < 0) name = 'writing';
+    TABS.forEach(function (t) { $('tab-' + t).hidden = t !== name; });
+    Array.prototype.forEach.call($('tabs').children, function (b) { b.classList.toggle('on', b.dataset.tab === name); });
+    $('writeTools').hidden = name !== 'writing';
+    if (name === 'notes') rerender();
+    if (name === 'import') { updateImportUI(); impMsg(''); }
+    if (name === 'export') { updateExportStats(); $('expMsg').textContent = ''; }
+    if (name === 'writing') { updateActive(); curCh = undefined; refreshPanel(); }
+    save('novel-writer-tab', name);
+  }
+  Array.prototype.forEach.call($('tabs').children, function (b) {
+    b.onclick = function () { showTab(b.dataset.tab); };
+  });
+
+  var saveBtn = $('btnSave');
+  function doSave() {
+    flush();
+    if (load(K_ON, '') === '1') syncNow(true);
+    saveBtn.textContent = 'Saved ✓';
+    setTimeout(function () { saveBtn.textContent = 'Save'; }, 1500);
+  }
+  saveBtn.onclick = doSave;
+  document.addEventListener('keydown', function (e) {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); doSave(); }
+  });
+
+  var panel = $('settings');
+  var fsSlider = $('fontsize'), fsVal = $('fontsizeVal');
+  var inSlider = $('indent'), inVal = $('indentVal');
+  var themeSel = $('theme');
+  function setFont(v) {
+    document.documentElement.style.setProperty('--fs', v + 'px');
+    fsVal.textContent = v + ' px'; fsSlider.value = v;
+  }
+  function setIndent(v) {
+    document.documentElement.style.setProperty('--indent', v + 'em');
+    inVal.textContent = v + ' em'; inSlider.value = v;
+  }
+  function applyTheme() {
+    var pref = themeSel.value;
+    var dark = pref === 'dark' || (pref === 'system' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  }
+  setFont(parseFloat(load('novel-writer-fontsize', window.innerWidth < 600 ? 18 : 20)));
+  setIndent(parseFloat(load('novel-writer-indent', 1.5)));
+  themeSel.value = load('novel-writer-theme', 'system');
+  applyTheme();
+  fsSlider.oninput = function () { setFont(fsSlider.value); save('novel-writer-fontsize', fsSlider.value); updateActive(); };
+  inSlider.oninput = function () { setIndent(inSlider.value); save('novel-writer-indent', inSlider.value); };
+  themeSel.onchange = function () { save('novel-writer-theme', themeSel.value); applyTheme(); };
+  if (window.matchMedia) {
+    var mq = matchMedia('(prefers-color-scheme: dark)');
+    if (mq.addEventListener) mq.addEventListener('change', applyTheme);
+  }
+  $('btnSettings').onclick = function (e) { e.stopPropagation(); panel.classList.toggle('open'); };
+  document.addEventListener('click', function (e) {
+    if (!panel.contains(e.target)) panel.classList.remove('open');
+  });
+
+  /* ================= Google Drive sync ================= */
+  var GOOGLE_CLIENT_ID = '';   // optional: paste your Client ID here instead of in Settings
+  var SCOPE = 'https://www.googleapis.com/auth/drive.file';   // the app can only see files it created
+  var FILE_NAME = 'novel-writer.json';
+  var API = 'https://www.googleapis.com/drive/v3/', UP = 'https://www.googleapis.com/upload/drive/v3/';
+  var token = null, tokenExp = 0, syncing = false, syncAgain = false, syncTimer, lastTry = 0, lastAuthPrompt = 0;
+
+  function clientId() { return GOOGLE_CLIENT_ID || load(K_CID, ''); }
+  function driveOn() { return load(K_ON, '') === '1'; }
+  function tokenValid() { return token && Date.now() < tokenExp - 60000; }
+  function fail(msg, code, extra) { var e = new Error(msg); e.code = code; if (extra) for (var k in extra) e[k] = extra[k]; return e; }
+
+  function setStatus(kind, label, detail) {
+    var b = $('syncBtn');
+    b.dataset.k = kind;
+    b.querySelector('.slbl').textContent = label;
+    b.title = 'Google Drive: ' + (detail || label);
+    $('driveMsg').textContent = (kind === 'err' || kind === 'warn') && detail ? detail : '';
+  }
+  function clock() { return new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); }
+
+  function getToken(interactive) {
+    return new Promise(function (resolve, reject) {
+      if (tokenValid()) return resolve(token);
+      if (!interactive) return reject(fail('Tap to sign in to Google again.', 'popup'));
+      if (!window.google || !google.accounts || !google.accounts.oauth2) return reject(fail('Google sign-in could not load. Check your connection.', 'nogsi'));
+      var id = clientId();
+      if (!id) return reject(fail('Paste your Google Client ID first.', 'noid'));
+      google.accounts.oauth2.initTokenClient({
+        client_id: id, scope: SCOPE,
+        callback: function (r) {
+          if (r.error) return reject(fail(r.error_description || r.error, 'denied'));
+          token = r.access_token; tokenExp = Date.now() + (r.expires_in || 3600) * 1000;
+          resolve(token);
+        },
+        error_callback: function (err) { reject(fail('The Google sign-in window was closed or blocked.', 'popup', { type: err && err.type })); }
+      }).requestAccessToken({ prompt: '' });
+    });
+  }
+
+  async function drive(url, opts) {
+    opts = opts || {};
+    var headers = { Authorization: 'Bearer ' + token };
+    if (opts.json) headers['Content-Type'] = 'application/json';
+    var res = await fetch(url, { method: opts.method || 'GET', headers: headers, body: opts.body });
+    if (!res.ok) {
+      var msg = 'Drive error ' + res.status;
+      try { var j = await res.json(); if (j.error && j.error.message) msg += ': ' + j.error.message; } catch (e) {}
+      throw fail(msg, 'http', { status: res.status });
+    }
+    return res.json();
+  }
+  async function createFile(name, body) {
+    var f = await drive(API + 'files?fields=id', { method: 'POST', json: true, body: JSON.stringify({ name: name, mimeType: 'application/json' }) });
+    var m = await drive(UP + 'files/' + f.id + '?uploadType=media&fields=modifiedTime', { method: 'PATCH', json: true, body: body });
+    return { id: f.id, modifiedTime: m.modifiedTime };
+  }
+  function updateFile(id, body) {
+    return drive(UP + 'files/' + id + '?uploadType=media&fields=modifiedTime', { method: 'PATCH', json: true, body: body });
+  }
+  function readFile(id) { return drive(API + 'files/' + id + '?alt=media'); }
+  async function findFile() {
+    var id = load(K_FILE, '');
+    if (id) {
+      try { var m = await drive(API + 'files/' + id + '?fields=id,modifiedTime,trashed'); if (!m.trashed) return m; }
+      catch (e) { if (e.status !== 404) throw e; }
+    }
+    var q = "name='" + FILE_NAME + "' and trashed=false";
+    var l = await drive(API + 'files?q=' + encodeURIComponent(q) + '&orderBy=' + encodeURIComponent('modifiedTime desc') + '&fields=' + encodeURIComponent('files(id,modifiedTime)'));
+    return l.files && l.files.length ? l.files[0] : null;
+  }
+
+  function payload() {
+    return JSON.stringify({ app: 'novel-writer', v: 1, saved: new Date().toISOString(), draft: editor.innerHTML, notes: data });
+  }
+  function backupName(who) { return 'novel-writer-backup-' + who + '-' + new Date().toISOString().slice(0, 16).replace(/[T:]/g, '-') + '.json'; }
+  function clean(html) {
+    var t = document.createElement('template');
+    t.innerHTML = html;
+    Array.prototype.forEach.call(t.content.querySelectorAll('script,style,iframe,object,embed,link,meta,form,img,svg'), function (n) { n.remove(); });
+    Array.prototype.forEach.call(t.content.querySelectorAll('*'), function (n) {
+      Array.prototype.slice.call(n.attributes).forEach(function (a) {
+        if (/^on/i.test(a.name) || /javascript:/i.test(a.value)) n.removeAttribute(a.name);
+      });
+    });
+    return t.innerHTML;
+  }
+  function applyPayload(p) {
+    if (!p || typeof p.draft !== 'string' || !p.notes || typeof p.notes !== 'object') throw fail('The Drive file is not a Novel Writer book.', 'bad');
+    editor.innerHTML = clean(p.draft);
+    LISTS.forEach(function (k) { data[k] = Array.isArray(p.notes[k]) ? p.notes[k] : []; });
+    data.chapterNotes = (p.notes.chapterNotes && typeof p.notes.chapterNotes === 'object') ? p.notes.chapterNotes : {};
+    normalize();
+    updateCount(); buildNav();
+    curCh = undefined; refreshPanel();
+    if (!$('tab-notes').hidden) rerender();
+    resetHistory();
+    flush();
+  }
+  function isEmptyLocal() {
+    return editor.innerText.trim() === '' && LISTS.every(function (k) { return !data[k].length; }) && !Object.keys(data.chapterNotes).length;
+  }
+
+  function askChoice(title, msg, opts) {
+    return new Promise(function (resolve) {
+      $('mTitle').textContent = title;
+      $('mMsg').textContent = msg;
+      var box = $('mBtns'); box.innerHTML = '';
+      opts.forEach(function (o) {
+        var b = document.createElement('button');
+        b.className = 'btn'; b.textContent = o[0];
+        b.onclick = function () { $('modal').hidden = true; resolve(o[1]); };
+        box.appendChild(b);
+      });
+      $('modal').hidden = false;
+    });
+  }
+  function askConflict(meta) {
+    return askChoice('Which version do you want to keep?',
+      'The book in your Google Drive is different from the one on this device (Drive version saved ' +
+      new Date(meta.modifiedTime).toLocaleString() + '). The version you don\u2019t pick is saved as a backup file in your Drive, so nothing is lost.',
+      [['Keep this device\u2019s version', 'device'], ['Use the Drive version', 'drive']]);
+  }
+
+  function finish(mod, startRev) {
+    save(K_MOD, mod);
+    if (rev === startRev) save(K_DIRTY, '0');
+    setStatus('ok', 'Synced ' + clock());
+  }
+  async function pull(meta, startRev) {
+    var p = await readFile(meta.id);
+    if (rev !== startRev) { syncAgain = true; return; }   // you typed while we were downloading; re-check
+    applyPayload(p);
+    save(K_MOD, meta.modifiedTime); save(K_DIRTY, '0');
+    setStatus('ok', 'Synced ' + clock());
+  }
+
+  async function syncNow(interactive) {
+    if (!driveOn()) return;
+    if (syncing) { syncAgain = true; return; }
+    if (!navigator.onLine) { setStatus('off', 'Offline'); return; }
+    syncing = true; syncAgain = false; lastTry = Date.now();
+    setStatus('busy', 'Syncing…');
+    try {
+      flush();
+      await getToken(interactive);
+      var startRev = rev;
+      var meta = await findFile();
+      var lastMod = load(K_MOD, ''), isDirty = load(K_DIRTY, '') === '1';
+      if (!meta) {
+        var made = await createFile(FILE_NAME, payload());
+        save(K_FILE, made.id);
+        finish(made.modifiedTime, startRev);
+      } else {
+        save(K_FILE, meta.id);
+        if (meta.modifiedTime === lastMod) {
+          if (isDirty) { var u = await updateFile(meta.id, payload()); finish(u.modifiedTime, startRev); }
+          else finish(meta.modifiedTime, startRev);
+        } else if (!isDirty && (lastMod || isEmptyLocal())) {
+          await pull(meta, startRev);
+        } else {
+          var choice = await askConflict(meta);
+          startRev = rev;
+          if (choice === 'drive') {
+            await createFile(backupName('this-device'), payload());
+            await pull(meta, startRev);
+          } else {
+            var old = await readFile(meta.id);
+            await createFile(backupName('drive'), JSON.stringify(old));
+            var u2 = await updateFile(meta.id, payload());
+            finish(u2.modifiedTime, startRev);
+          }
+        }
+      }
+    } catch (e) {
+      if (e.status === 401) token = null;
+      if (e.status === 401 || e.code === 'popup' || e.code === 'denied') setStatus('warn', 'Tap to sync', e.message);
+      else if (e.code === 'nogsi' || !navigator.onLine || e instanceof TypeError) setStatus('off', 'Offline', 'Could not reach Google. Your work is safe on this device.');
+      else setStatus('err', 'Sync problem', e.message);
+    } finally {
+      syncing = false;
+      if (syncAgain) setTimeout(function () { syncNow(false); }, 500);
+    }
+  }
+  function syncSoon() {
+    clearTimeout(syncTimer);
+    if (!tokenValid()) { setStatus('warn', 'Tap to sync', 'Tap here (or Save) to sync with Google Drive.'); return; }
+    syncTimer = setTimeout(function () { syncNow(false); }, 6000);
+  }
+
+  function updateDriveUI() {
+    var on = driveOn();
+    $('btnConnect').hidden = on;
+    $('btnSyncNow').hidden = !on;
+    $('btnDisconnect').hidden = !on;
+    $('gclientRow').hidden = !!GOOGLE_CLIENT_ID || on;
+    $('driveState').textContent = on
+      ? 'Connected. Your book is kept in a file called ' + FILE_NAME + ' in your Google Drive.'
+      : 'Not connected. Your work is saved on this device only.';
+    if (!on) setStatus('off', 'Not synced');
+  }
+  $('gclient').value = load(K_CID, '');
+  $('btnConnect').onclick = async function () {
+    if (!GOOGLE_CLIENT_ID) save(K_CID, $('gclient').value.trim());
+    try {
+      await getToken(true);
+      save(K_ON, '1'); updateDriveUI();
+      syncNow(true);
+    } catch (e) { $('driveMsg').textContent = e.message; }
+  };
+  $('btnSyncNow').onclick = function () { syncNow(true); };
+  $('btnDisconnect').onclick = function () {
+    try { if (token && window.google) google.accounts.oauth2.revoke(token, function () {}); } catch (e) {}
+    token = null; tokenExp = 0;
+    save(K_ON, ''); save(K_MOD, ''); save(K_FILE, '');
+    updateDriveUI();
+  };
+  $('syncBtn').onclick = function (e) {
+    e.stopPropagation();
+    if (driveOn()) syncNow(true); else panel.classList.add('open');
+  };
+
+  // pick up changes from your other devices
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden && driveOn() && tokenValid() && Date.now() - lastTry > 30000) syncNow(false);
+  });
+  window.addEventListener('online', function () { if (driveOn() && tokenValid()) syncNow(false); });
+  window.addEventListener('offline', function () { if (driveOn()) setStatus('off', 'Offline'); });
+  setInterval(function () { if (!document.hidden && driveOn() && tokenValid() && Date.now() - lastTry > 90000) syncNow(false); }, 30000);
+  // Google needs a tap to sign in again after about an hour: use your next tap anywhere to do it
+  document.addEventListener('click', function () {
+    if (driveOn() && !tokenValid() && !syncing && Date.now() - lastAuthPrompt > 600000) { lastAuthPrompt = Date.now(); syncNow(true); }
+  }, true);
+
+  updateCount();
+  buildNav();
+  updateDriveUI();
+  resetHistory();
+  if (driveOn()) setStatus('warn', 'Tap to sync', 'Tap here (or Save) to sync with Google Drive.');
+  showTab(load('novel-writer-tab', 'writing'));
+})();
+</script>
+</body>
+</html>
