@@ -451,6 +451,12 @@
           <label class="btn" style="display:inline-block">Choose a file&hellip;<input type="file" id="impFile" accept=".json,application/json" class="vh"></label>
           <div class="drop" id="drop">or drop the file here</div>
         </div>
+        <div class="io-card">
+          <h2>From Markdown (Obsidian)</h2>
+          <p>Choose one or more .md files. Several files are joined in name order. A heading starts a chapter; if you also use bigger headings above them, those become part pages. Lines of <b>***</b>, <b>---</b> or <b>* * *</b> become scene breaks. Italics are kept. Your notes stay as they are.</p>
+          <label class="btn" style="display:inline-block">Choose .md files&hellip;<input type="file" id="impMd" accept=".md,.markdown,.txt,text/markdown,text/plain" multiple class="vh"></label>
+          <div class="drop" id="dropMd">or drop the files here</div>
+        </div>
         <p class="io-msg" id="impMsg"></p>
       </div>
     </section>
@@ -1034,6 +1040,15 @@
   editor.addEventListener('beforeinput', function (e) {
     if (e.inputType === 'insertText' && e.data && e.data.length === 1) {
       var ch = e.data, tb;
+      // two hyphens in a row become an em dash
+      if (ch === '-') {
+        var selD = window.getSelection(), rD = selD.rangeCount && selD.getRangeAt(0), nD = rD && rD.startContainer, oD = rD && rD.startOffset;
+        if (rD && rD.collapsed && nD.nodeType === 3 && oD >= 1 && nD.data.charAt(oD - 1) === '-' && textBeforeCaret() !== null) {
+          var rrD = document.createRange(); rrD.setStart(nD, oD - 1); rrD.setEnd(nD, oD);
+          selD.removeAllRanges(); selD.addRange(rrD); e.preventDefault();
+          document.execCommand('insertText', false, '\u2014'); return;
+        }
+      }
       // three periods become one ellipsis character, attached to the word before it
       if (SMART.curly && ch === '.') {
         var sel0 = window.getSelection(), r0 = sel0.rangeCount && sel0.getRangeAt(0), n0 = r0 && r0.startContainer, o0 = r0 && r0.startOffset;
@@ -1098,8 +1113,49 @@
       var pre = document.createRange();
       pre.setStart(b, 0);
       pre.setEnd(sel.anchorNode, sel.anchorOffset);
-      if (pre.toString().trim() === '') e.preventDefault();
+      if (pre.toString().trim() === '') {
+        e.preventDefault();
+        // Return at the very start of a paragraph opens a gap above it. An empty line cannot open another.
+        if (!isEmptyP(b)) {
+          var gap = document.createElement('p'); gap.innerHTML = '<br>';
+          editor.insertBefore(gap, b); placeCursorIn(gap); changed(true);
+        }
+      }
     }
+  });
+
+  // An empty line is allowed only while the cursor is in it. When the cursor leaves, it closes up.
+  function closeGaps() {
+    var sel = window.getSelection(), here = (sel.rangeCount && editor.contains(sel.anchorNode) && document.activeElement === editor) ? blockOf(sel.anchorNode) : null;
+    var gone = false;
+    Array.prototype.slice.call(editor.children).forEach(function (el) {
+      if (el !== here && el !== editor.lastElementChild && isEmptyP(el)) { el.remove(); gone = true; }
+    });
+    if (gone) { updateCount(); dirty(); scheduleHistory(); clearTimeout(navTimer); navTimer = setTimeout(buildNav, 200); }
+  }
+  document.addEventListener('selectionchange', function () { closeGaps(); });
+  editor.addEventListener('blur', closeGaps);
+
+  // Desktop: clicking on the blank page (beside or below the text) puts the cursor in the nearest text.
+  scroller.addEventListener('mousedown', function (e) {
+    if (e.button !== 0 || !window.matchMedia('(pointer: fine)').matches) return;
+    if (editor.contains(e.target) || e.target.closest('button,a,input,select,textarea,.cnotes')) return;
+    var sr = scroller.getBoundingClientRect();
+    if (e.clientX >= sr.left + scroller.clientWidth || e.clientY >= sr.top + scroller.clientHeight) return; // scrollbar
+    var er = editor.getBoundingClientRect(), first = editor.firstElementChild, last = editor.lastElementChild;
+    e.preventDefault();
+    editor.focus({ preventScroll: true });
+    var r = null;
+    if (last && e.clientY > last.getBoundingClientRect().bottom) {
+      r = document.createRange(); r.selectNodeContents(last); r.collapse(false);
+    } else if (first && e.clientY < first.getBoundingClientRect().top) {
+      r = document.createRange(); r.selectNodeContents(first); r.collapse(true);
+    } else {
+      var x = Math.min(Math.max(e.clientX, er.left + 2), er.right - 2);
+      r = document.caretRangeFromPoint ? document.caretRangeFromPoint(x, e.clientY) : null;
+      if (!r || !editor.contains(r.startContainer)) { r = document.createRange(); r.selectNodeContents(last); r.collapse(false); }
+    }
+    var s2 = window.getSelection(); s2.removeAllRanges(); s2.addRange(r);
   });
 
   editor.addEventListener('paste', function (e) {
@@ -1505,6 +1561,86 @@
   ['dragenter', 'dragover'].forEach(function (t) { drop.addEventListener(t, function (e) { e.preventDefault(); drop.classList.add('over'); }); });
   ['dragleave', 'drop'].forEach(function (t) { drop.addEventListener(t, function (e) { e.preventDefault(); drop.classList.remove('over'); }); });
   drop.addEventListener('drop', function (e) { var f = e.dataTransfer && e.dataTransfer.files[0]; if (f) readLocalFile(f); });
+
+  /* ---- Markdown import ---- */
+  function escH(t) { return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function mdInline(t) {
+    t = t.replace(/!\[\[[^\]]*\]\]|!\[[^\]]*\]\([^)]*\)/g, '');
+    t = t.replace(/\[\[([^\]|]*)\|([^\]]*)\]\]/g, '$2').replace(/\[\[([^\]]*)\]\]/g, '$1');
+    t = t.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');
+    t = t.replace(/==([^=]+)==/g, '$1').replace(/~~([^~]+)~~/g, '$1').replace(/`([^`]+)`/g, '$1');
+    t = escH(t);
+    t = t.replace(/(\*\*\*|___)(?=\S)(.+?)(?<=\S)\1/g, '<em>$2</em>');
+    t = t.replace(/(\*\*|__)(?=\S)(.+?)(?<=\S)\1/g, '$2');
+    t = t.replace(/\*(?=\S)(.+?)(?<=\S)\*/g, '<em>$1</em>');
+    t = t.replace(/(^|[^A-Za-z0-9])_(?=\S)(.+?)(?<=\S)_(?![A-Za-z0-9])/g, '$1<em>$2</em>');
+    return t.replace(/\\([*_#\[\]`>~=-])/g, '$1');
+  }
+  function mdToHtml(files) {
+    var docs = files.map(function (f) {
+      var t = f.text.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
+      t = t.replace(/^---\n[\s\S]*?\n---\n/, '').replace(/%%[\s\S]*?%%/g, '').replace(/<!--[\s\S]*?-->/g, '');
+      return { name: f.name.replace(/\.[^.]+$/, ''), lines: t.split('\n') };
+    });
+    var levels = {};
+    docs.forEach(function (d) { d.lines.forEach(function (l) { var m = /^(#{1,6})\s+\S/.exec(l); if (m) levels[m[1].length] = 1; }); });
+    var lv = Object.keys(levels).map(Number).sort(function (a, b) { return a - b; });
+    var partLevel = lv.length > 1 ? lv[0] : 0, chapLevel = lv.length > 1 ? lv[1] : (lv[0] || 0);
+    var out = [], para = [], nCh = 0, nPart = 0, nBreak = 0;
+    function endPara() { if (para.length) { out.push('<p>' + para.join(' ') + '</p>'); para = []; } }
+    function chapter(title) { endPara(); nCh++; out.push('<h2 class="chapter" data-id="' + uid() + '">' + mdInline(title.replace(/\s+#+\s*$/, '').trim()) + '</h2>'); }
+    docs.forEach(function (d) {
+      var hasHead = d.lines.some(function (l) { return /^#{1,6}\s+\S/.test(l); });
+      if (!hasHead && docs.length > 1) chapter(d.name);
+      d.lines.forEach(function (l) {
+        var m = /^(#{1,6})\s+(.*)$/.exec(l);
+        if (m && m[2].trim()) {
+          var n = m[1].length;
+          if (partLevel && n === partLevel) { endPara(); nPart++; out.push('<div class="part"><div class="part-title">' + mdInline(m[2].trim()) + '</div><div class="part-sub"></div></div>'); }
+          else if (n === chapLevel || (!partLevel && n >= chapLevel)) chapter(m[2]);
+          else if (partLevel && n > chapLevel) { endPara(); out.push('<p>' + mdInline(m[2].trim()) + '</p>'); }
+          else chapter(m[2]);
+        } else if (/^\s*([*_-])(\s*\1){2,}\s*$/.test(l) || /^\s*#\s*$/.test(l)) {
+          endPara(); nBreak++; out.push('<div class="scene-break" contenteditable="false"></div>');
+        } else if (!l.trim()) { endPara(); }
+        else { para.push(mdInline(l.replace(/^\s*>\s?/, '').trim())); }
+      });
+      endPara();
+    });
+    return { html: out.join(''), chapters: nCh, parts: nPart, breaks: nBreak };
+  }
+  async function importMd(fileList) {
+    var files = Array.prototype.slice.call(fileList).filter(function (f) { return /\.(md|markdown|txt)$/i.test(f.name) || /^text\//.test(f.type); });
+    if (!files.length) { impMsg('Please choose .md files.', true); return; }
+    files.sort(function (a, b) { return a.name.localeCompare(b.name, undefined, { numeric: true }); });
+    var read = await Promise.all(files.map(function (f) {
+      return new Promise(function (res) { var fr = new FileReader(); fr.onload = function () { res({ name: f.name, text: String(fr.result) }); }; fr.readAsText(f); });
+    }));
+    var r = mdToHtml(read);
+    if (!r.html) { impMsg('That file seems to be empty.', true); return; }
+    var mode = 'replace';
+    if (editor.innerText.trim() !== '') {
+      mode = await askChoice('Add to your book, or replace it?',
+        'Your book on this device already has writing in it. Your notes are not touched either way. You can undo it right afterwards.',
+        [['Cancel', 'no'], ['Add to end', 'add'], ['Replace', 'replace']]);
+      if (mode === 'no') return;
+    }
+    var prev = payload();
+    var html = clean(r.html);
+    if (mode === 'add') { cleanEmpties(); editor.insertAdjacentHTML('beforeend', html); } else editor.innerHTML = html;
+    Array.prototype.forEach.call(editor.querySelectorAll('.part'), fixPart);
+    if (!editor.lastElementChild || editor.lastElementChild.tagName !== 'P') editor.insertAdjacentHTML('beforeend', '<p><br></p>');
+    normalize(); resyncTotal(); buildNav(); curCh = undefined; refreshPanel(); resetHistory(); flush(); dirty();
+    impMsg('');
+    showTab('writing');
+    scroller.scrollTop = mode === 'add' ? scroller.scrollHeight : 0;
+    toast('Imported ' + r.chapters + ' chapter' + (r.chapters === 1 ? '' : 's') + (r.parts ? ', ' + r.parts + ' part' + (r.parts === 1 ? '' : 's') : '') + (r.breaks ? ', ' + r.breaks + ' scene break' + (r.breaks === 1 ? '' : 's') : ''), 'Undo', function () { applyPayload(JSON.parse(prev)); dirty(); }, 30000);
+  }
+  $('impMd').onchange = function () { if (this.files.length) importMd(this.files); this.value = ''; };
+  var dropMd = $('dropMd');
+  ['dragenter', 'dragover'].forEach(function (t) { dropMd.addEventListener(t, function (e) { e.preventDefault(); dropMd.classList.add('over'); }); });
+  ['dragleave', 'drop'].forEach(function (t) { dropMd.addEventListener(t, function (e) { e.preventDefault(); dropMd.classList.remove('over'); }); });
+  dropMd.addEventListener('drop', function (e) { if (e.dataTransfer && e.dataTransfer.files.length) importMd(e.dataTransfer.files); });
 
   function updateImportUI() {
     var on = driveOn();
