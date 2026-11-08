@@ -104,6 +104,10 @@
   }
   .nav-item:hover { background: var(--btnhover); }
   .nav-item.part-i { font-weight: 600; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+  .nav-item .grip { display: inline-block; width: 16px; margin-left: -4px; cursor: grab; touch-action: none; color: var(--muted); letter-spacing: -2px; }
+  .nav-item.dragging { opacity: .45; }
+  .nav-item.drop-before { box-shadow: inset 0 2px 0 var(--accent); }
+  .nav-item.drop-after { box-shadow: inset 0 -2px 0 var(--accent); }
   .nav-item.has-pp { display: flex; gap: 8px; align-items: baseline; }
   .nav-item .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .nav-item .pp { flex: none; font-size: 12px; color: var(--muted); }
@@ -453,7 +457,7 @@
         </div>
         <div class="io-card">
           <h2>From Markdown (Obsidian)</h2>
-          <p>Choose one or more .md files. Several files are joined in name order. A heading starts a chapter; if you also use bigger headings above them, those become part pages. Lines of <b>***</b>, <b>---</b> or <b>* * *</b> become scene breaks. Italics are kept. Your notes stay as they are.</p>
+          <p>Choose one or more .md files. Several files are joined in name order. A heading starts a chapter; if you also use bigger headings above them, those become part pages. Every line is its own paragraph. Two or more empty lines in a row, or a line of <b>***</b>, <b>---</b> or <b>* * *</b>, become a scene break. Italics are kept. Your notes stay as they are.</p>
           <label class="btn" style="display:inline-block">Choose .md files&hellip;<input type="file" id="impMd" accept=".md,.markdown,.txt,text/markdown,text/plain" multiple class="vh"></label>
           <div class="drop" id="dropMd">or drop the files here</div>
         </div>
@@ -1219,6 +1223,11 @@
         br = 0; hasPart = true;
         var pt = (el.querySelector('.part-title') || {}).textContent || '';
         addNavItem('Part' + (pt.trim() ? ': ' + pt.trim() : ' (untitled)'), 'chapter part-i', el, 'start');
+        var pb = navTargets[navTargets.length - 1].btn, gr = document.createElement('span');
+        gr.className = 'grip'; gr.textContent = '\u22ee\u22ee'; gr.title = 'Drag to move this part page';
+        pb.insertBefore(gr, pb.firstChild);
+        gr.onclick = function (e) { e.stopPropagation(); };
+        gr.addEventListener('pointerdown', function (e) { startPartDrag(e, el, pb); });
       } else if (el.classList.contains('scene-break')) {
         if (ch === 0 && !hasOpening && !hasPart) { addNavItem('Opening', 'chapter', editor, 'start'); hasOpening = true; }
         br++;
@@ -1232,6 +1241,51 @@
       navList.appendChild(d);
     }
     updateActive();
+  }
+  /* ---- drag a part page to a new place from the Contents ---- */
+  function startPartDrag(e, partEl, btn) {
+    if (e.button) return;
+    e.preventDefault(); e.stopPropagation();
+    var grip = e.currentTarget, mark = null, side = '';
+    try { grip.setPointerCapture(e.pointerId); } catch (x) {}
+    btn.classList.add('dragging');
+    function clear() { if (mark) mark.classList.remove('drop-before', 'drop-after'); mark = null; }
+    function move(ev) {
+      var under = document.elementFromPoint(ev.clientX, ev.clientY);
+      var it = under && under.closest ? under.closest('.nav-item.chapter') : null;
+      clear();
+      if (!it || it === btn || !navList.contains(it)) return;
+      var r = it.getBoundingClientRect();
+      side = ev.clientY < r.top + r.height / 2 ? 'before' : 'after';
+      mark = it; it.classList.add('drop-' + side);
+    }
+    function up() {
+      grip.removeEventListener('pointermove', move); grip.removeEventListener('pointerup', up); grip.removeEventListener('pointercancel', up);
+      btn.classList.remove('dragging');
+      var target = mark, sd = side; clear();
+      if (target) movePart(partEl, target, sd);
+    }
+    grip.addEventListener('pointermove', move); grip.addEventListener('pointerup', up); grip.addEventListener('pointercancel', up);
+  }
+  function movePart(partEl, targetBtn, sd) {
+    var ti = -1;
+    navTargets.forEach(function (t, i) { if (t.btn === targetBtn) ti = i; });
+    if (ti < 0) return;
+    var ref;
+    if (sd === 'before') ref = navTargets[ti].el === editor ? editor.firstElementChild : navTargets[ti].el;
+    else {
+      ref = null;
+      for (var i = ti + 1; i < navTargets.length; i++) {
+        var t = navTargets[i];
+        if (t.el !== partEl && t.btn.classList.contains('chapter')) { ref = t.el; break; }
+      }
+    }
+    if (ref === partEl || (ref && ref.previousElementSibling === partEl && false)) return;
+    commitHistory();
+    editor.insertBefore(partEl, ref || null);
+    ensureContent(); cleanEmpties();
+    changed(true); buildNav();
+    toast('Part page moved');
   }
   function updateActive() {
     var top = scroller.getBoundingClientRect().top + 80, cur = null;
@@ -1592,18 +1646,24 @@
     docs.forEach(function (d) {
       var hasHead = d.lines.some(function (l) { return /^#{1,6}\s+\S/.test(l); });
       if (!hasHead && docs.length > 1) chapter(d.name);
+      var blanks = 0, last = '';
       d.lines.forEach(function (l) {
+        if (!l.trim()) { blanks++; return; }
         var m = /^(#{1,6})\s+(.*)$/.exec(l);
+        var isRule = /^\s*([*_-])(\s*\1){2,}\s*$/.test(l) || /^\s*#\s*$/.test(l);
+        // two or more empty lines in a row between paragraphs is a scene break
+        if (blanks >= 2 && last === 'p' && !(m && m[2].trim()) && !isRule) { out.push('<div class="scene-break" contenteditable="false"></div>'); nBreak++; }
+        blanks = 0;
         if (m && m[2].trim()) {
+          last = 'h';
           var n = m[1].length;
           if (partLevel && n === partLevel) { endPara(); nPart++; out.push('<div class="part"><div class="part-title">' + mdInline(m[2].trim()) + '</div><div class="part-sub"></div></div>'); }
           else if (n === chapLevel || (!partLevel && n >= chapLevel)) chapter(m[2]);
           else if (partLevel && n > chapLevel) { endPara(); out.push('<p>' + mdInline(m[2].trim()) + '</p>'); }
           else chapter(m[2]);
-        } else if (/^\s*([*_-])(\s*\1){2,}\s*$/.test(l) || /^\s*#\s*$/.test(l)) {
-          endPara(); nBreak++; out.push('<div class="scene-break" contenteditable="false"></div>');
-        } else if (!l.trim()) { endPara(); }
-        else { para.push(mdInline(l.replace(/^\s*>\s?/, '').trim())); }
+        } else if (isRule) {
+          last = 'b'; nBreak++; out.push('<div class="scene-break" contenteditable="false"></div>');
+        } else { last = 'p'; out.push('<p>' + mdInline(l.replace(/^\s*>\s?/, '').trim()) + '</p>'); }
       });
       endPara();
     });
