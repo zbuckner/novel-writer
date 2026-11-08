@@ -35,7 +35,7 @@
   .topbar {
     display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px;
     padding: 0 12px; padding-top: env(safe-area-inset-top);
-    background: var(--bar); border-bottom: 1px solid var(--line); overflow-x: auto;
+    background: var(--bar); border-bottom: 1px solid var(--line); overflow-x: auto; overflow-y: hidden;
   }
   .brand { font-family: 'EB Garamond', Georgia, serif; font-size: 18px; letter-spacing: .02em; white-space: nowrap; }
   .tabs { display: flex; gap: 4px; }
@@ -62,6 +62,7 @@
   .ibtn .chev { margin-left: 2px; }
   .ibtn svg { display: block; }
   .qg { font: 600 24px/1 Georgia, 'Times New Roman', serif; letter-spacing: -1px; padding-top: 6px; }
+  .dg { font: 600 22px/1 Georgia, 'Times New Roman', serif; }
   .only-touch { display: none; }
   @media (pointer: coarse) { .only-touch { display: inline-flex; } .row-pw { display: none; } }
   #btnSave .ck { display: none; }
@@ -77,7 +78,7 @@
 
   /* ---- writing tools strip (Writing tab only) ---- */
   .tools {
-    display: flex; gap: 8px; align-items: center; padding: 8px 12px; overflow-x: auto;
+    display: flex; gap: 8px; align-items: center; padding: 8px 12px; overflow-x: auto; overflow-y: hidden;
     background: var(--bar); border-bottom: 1px solid var(--line);
   }
   .spacer { flex: 1; }
@@ -103,13 +104,24 @@
   }
   .nav-item:hover { background: var(--btnhover); }
   .nav-item.part-i { font-weight: 600; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+  .nav-item.has-pp { display: flex; gap: 8px; align-items: baseline; }
+  .nav-item .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .nav-item .pp { flex: none; font-size: 12px; color: var(--muted); }
+  .nav-title { display: flex; align-items: center; justify-content: space-between; }
+  .nav-title .mini { background: none; border: 0; padding: 2px 6px; color: var(--muted); border-radius: 4px; display: inline-flex; }
+  .nav-title .mini.on { color: var(--accent); background: var(--btnhover); }
+  .fmt-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 14px; }
+  .fmt-row select, .fmt-row input { font: inherit; font-size: 14px; padding: 6px 8px; background: var(--paper); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; }
+  .fmt-row input { width: 90px; }
+  .nav-item.resume { color: var(--accent); font-size: 13px; }
+  .settings .chk label { display: flex; gap: 8px; align-items: center; margin: 0; }
   .nav-item.sub { padding-left: 34px; font-size: 13px; color: var(--muted); }
   .nav-item.active { color: var(--accent); font-weight: 600; background: var(--btnhover); }
   .backdrop { display: none; }
 
   .cnotes {
     display: none; width: 280px; flex: none; flex-direction: column; padding: 12px;
-    background: var(--bar); border-left: 1px solid var(--line);
+    background: var(--bar); border-right: 1px solid var(--line);
   }
   .layout.notes-open .cnotes { display: flex; }
   .cn-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
@@ -206,7 +218,7 @@
 
   .btn:disabled { opacity: .4; cursor: default; }
   .btn:disabled:hover { background: var(--btn); }
-  .vh { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+  .vh { position: absolute; opacity: 0; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; pointer-events: none; }
   #tab-import, #tab-export { overflow-y: auto; padding: 24px 16px 80px; }
   .io-wrap { max-width: 640px; margin: 0 auto; }
   .io-card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
@@ -309,7 +321,7 @@
   @media (max-width: 700px) {
     .nav, .cnotes { position: absolute; z-index: 4; top: 0; bottom: 0; max-width: 320px; box-shadow: 0 0 18px rgba(0,0,0,.3); }
     .nav { left: 0; width: 78%; }
-    .cnotes { right: 0; width: 86%; }
+    .cnotes { left: 0; width: 86%; }
     .layout.nav-open .backdrop, .layout.notes-open .backdrop { display: block; position: absolute; inset: 0; z-index: 3; background: rgba(0,0,0,.35); }
     .topbar { display: flex; gap: 4px; }
     .brand { display: none; }
@@ -325,10 +337,11 @@
     .btn .ico { display: inline; }
     .row-pw { display: none; }
   }
+  @media (max-width: 600px) { .tools { gap: 4px; } .tg { gap: 4px; } .tools .ibtn { width: 34px; } }
   @media (max-width: 360px) {
     .tools { padding: 8px 6px; gap: 4px; }
     .tg { gap: 3px; }
-    .tools .ibtn { width: 33px; }
+    .tools .ibtn { width: 30px; }
     .tabs button { padding: 13px 4px 10px; font-size: 13px; }
     .top-right .ibtn { width: 31px; }
     .sync { width: 28px; }
@@ -369,6 +382,7 @@
       <button class="ibtn keep" id="btnUndo" title="Undo (Ctrl/Cmd+Z)" aria-label="Undo" disabled><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
       <button class="ibtn keep" id="btnRedo" title="Redo (Ctrl/Cmd+Shift+Z)" aria-label="Redo" disabled><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg></button>
       <button class="ibtn keep" id="btnItalic" title="Italic (Ctrl/Cmd+I)" aria-label="Italic"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" x2="10" y1="4" y2="4"/><line x1="14" x2="5" y1="20" y2="20"/><line x1="15" x2="9" y1="4" y2="20"/></svg></button>
+      <button class="ibtn keep" id="btnDash" title="Em dash" aria-label="Em dash"><span class="dg">&mdash;</span></button>
       <button class="ibtn keep" id="btnBreak" title="Insert a break" aria-label="Insert a break"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="3" x2="21" y1="12" y2="12"/><polyline points="8 8 12 4 16 8"/><polyline points="16 16 12 20 8 16"/></svg><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
       <button class="ibtn keep" id="btnCuts" title="Move the highlighted text to Cut Scenes" aria-label="Move to Cut Scenes"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" x2="8.12" y1="4" y2="15.88"/><line x1="14.47" x2="20" y1="14.48" y2="20"/><line x1="8.12" x2="12" y1="8.12" y2="12"/></svg></button>
     </div>
@@ -402,6 +416,9 @@
         <option value="dark">Dark</option>
       </select>
     </div>
+    <h3 style="margin-top:20px">Typing</h3>
+    <div class="row chk"><label><input type="checkbox" id="optCap"> Capitalize the start of sentences</label></div>
+    <div class="row chk"><label><input type="checkbox" id="optCurly"> Curly quotes and ellipses</label></div>
     <h3 style="margin-top:20px">Google Drive</h3>
     <div class="note" id="driveState"></div>
     <div id="gclientRow">
@@ -441,20 +458,20 @@
     <section class="tab" id="tab-writing">
       <div class="layout" id="layout">
         <nav class="nav" id="nav">
-          <div class="nav-title">Contents</div>
+          <div class="nav-title"><span>Contents</span><button class="mini" id="navPages" title="Show estimated pages for each chapter" aria-label="Show page counts"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></svg></button></div>
           <div id="navList"></div>
         </nav>
+        <aside class="cnotes" id="cnotes">
+          <div class="cn-head"><strong id="cnTitle"></strong><button id="cnClose" title="Close" aria-label="Close">&times;</button></div>
+          <textarea id="cnText" spellcheck="true"></textarea>
+          <div class="cn-hint">Saved with your book, but never exported.</div>
+        </aside>
         <div class="backdrop" id="backdrop"></div>
         <div class="scroll" id="scroll">
           <div class="page">
             <div id="editor" contenteditable="true" spellcheck="true" lang="en"></div>
           </div>
         </div>
-        <aside class="cnotes" id="cnotes">
-          <div class="cn-head"><strong id="cnTitle"></strong><button id="cnClose" title="Close" aria-label="Close">&times;</button></div>
-          <textarea id="cnText" spellcheck="true"></textarea>
-          <div class="cn-hint">Saved with your book, but never exported.</div>
-        </aside>
       </div>
     </section>
 
@@ -466,6 +483,19 @@
       <div class="io-wrap">
         <h1 class="pg-title">Export</h1>
         <p class="meta" id="expStats"></p>
+        <div class="io-card">
+          <h2>Page estimate</h2>
+          <p>An estimate of printed length from words per page. Every chapter starts on a new page, and each part page counts as one page. Title pages and other front and back matter are not included.</p>
+          <div class="fmt-row"><label for="fmtPreset">Format</label>
+            <select id="fmtPreset">
+              <option value="paperback">Paperback (300 words per page)</option>
+              <option value="manuscript">Manuscript (250 words per page)</option>
+              <option value="custom">Custom</option>
+            </select>
+          </div>
+          <div class="fmt-row" id="fmtCustomRow"><label for="fmtWpp">Words per page</label><input type="number" id="fmtWpp" min="100" max="700" step="10"></div>
+          <p class="io-msg" id="pageEst" style="font-weight:600;color:var(--ink)"></p>
+        </div>
         <div class="io-card">
           <h2>Book file (.json)</h2>
           <p>Your whole book and every note in one file. Keep it as a backup, or import it on any device.</p>
@@ -505,6 +535,11 @@
     try { d = JSON.parse(load(DKEY, '{}')) || {}; } catch (e) { d = {}; }
     LISTS.forEach(function (k) { if (!Array.isArray(d[k])) d[k] = []; });
     if (!d.chapterNotes || typeof d.chapterNotes !== 'object') d.chapterNotes = {};
+    if (!d.daily || typeof d.daily !== 'object') d.daily = {};
+    var dk = Object.keys(d.daily).sort();
+    while (dk.length > 400) delete d.daily[dk.shift()];
+    if (!d.pos || typeof d.pos !== 'object') d.pos = null;
+    if (!d.fmt || typeof d.fmt !== 'object') d.fmt = { preset: 'paperback', wpp: 300 };
     return d;
   })();
 
@@ -578,9 +613,57 @@
   }
   function isEmptyP(el) { return el && el.nodeName === 'P' && el.textContent.trim() === ''; }
 
+  /* ---- page estimate: words per page, every chapter starts on a new page ---- */
+  var PRESETS = { manuscript: 250, paperback: 300 };
+  var OPEN_ALLOWANCE = 0.25;     // a chapter opening uses about a quarter page for its heading
+  function wordsPerPage() {
+    var f = data.fmt, v = f.preset === 'custom' ? +f.wpp : PRESETS[f.preset];
+    return v >= 50 ? v : 300;
+  }
+  function pageStats() {
+    var wpp = wordsPerPage(), segs = [], cur = null, byEl = new Map(), total = 0, chapters = 0, parts = 0;
+    function words(el) { var t = el.textContent.trim(); return t ? t.split(/\s+/).length : 0; }
+    Array.prototype.forEach.call(editor.children, function (el) {
+      if (el.nodeName === 'H2') { cur = { el: el, words: 0, kind: 'chapter' }; segs.push(cur); chapters++; }
+      else if (el.classList.contains('part')) { segs.push({ el: el, words: 0, kind: 'part' }); cur = null; parts++; }
+      else if (el.nodeName === 'P') {
+        if (!cur) { cur = { el: null, words: 0, kind: 'opening' }; segs.push(cur); }
+        cur.words += words(el);
+      }
+    });
+    segs.forEach(function (sg) {
+      var pg = sg.kind === 'part' ? 1 : sg.kind === 'chapter' ? Math.max(1, Math.ceil((sg.words + OPEN_ALLOWANCE * wpp) / wpp)) : Math.ceil(sg.words / wpp);
+      if (sg.el) byEl.set(sg.el, pg);
+      total += pg;
+    });
+    return { byEl: byEl, total: total, chapters: chapters, parts: parts, wpp: wpp };
+  }
+  var showPages = load('novel-writer-showpages', '') === '1';
+
+  var jumped = false, T0 = Date.now();
+  function validPos() { var st = data.pos; return st && nodeAt(st.f) ? st : null; }
+  function jumpToLast() {
+    var st = validPos(); if (!st) return false;
+    var f = nodeAt(st.f), el = f.nodeType === 3 ? f.parentNode : f;
+    if (el && el.scrollIntoView) el.scrollIntoView({ block: 'center' });
+    try {
+      if (!(window.matchMedia && matchMedia('(pointer: coarse)').matches)) editor.focus({ preventScroll: true });
+      setSel(st);
+    } catch (e) {}
+    return true;
+  }
+  function firstJump() {
+    if (jumped || $('tab-writing').hidden) return;
+    jumped = true;
+    var done = false, go = function () { if (done) return; done = true; jumpToLast(); };
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(go);
+    setTimeout(go, 1500);
+  }
+
   var navTimer;
   function changed(now) {
     updateCount();
+    var sp = getSel(); if (sp) data.pos = sp;
     dirty();
     if (now) commitHistory(); else scheduleHistory();
     clearTimeout(navTimer);
@@ -653,17 +736,28 @@
     st.html = editor.innerHTML;
     editor.focus({ preventScroll: true });
     setSel(st.sel);
-    updateCount(); dirty(); buildNav(); hideToast();
+    resyncTotal(); dirty(); buildNav(); hideToast();
     curCh = undefined; refreshPanel();
     updateUndoUI();
   }
   function undo() { commitHistory(); if (hi <= 0) return; hi--; restoreState(hist[hi]); }
   function redo() { if (hi >= hist.length - 1) return; hi++; restoreState(hist[hi]); }
-  function updateCount() {
-    var t = editor.innerText.trim();
-    var n = t ? t.split(/\s+/).length : 0;
-    $('count').textContent = n.toLocaleString() + ' words';
+  // total words, plus words written today (typing adds to it; deleting or undoing never subtracts)
+  var lastTotal = null;
+  function countWords() { var t = editor.innerText.trim(); return t ? t.split(/\s+/).length : 0; }
+  function todayKey() {
+    var d = new Date(), z = function (n) { return (n < 10 ? '0' : '') + n; };
+    return d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate());
   }
+  function showCount() {
+    $('count').textContent = lastTotal.toLocaleString() + ' words \u00b7 ' + (data.daily[todayKey()] || 0).toLocaleString() + ' today';
+  }
+  function updateCount() {
+    var n = countWords();
+    if (lastTotal !== null && n > lastTotal) { var k = todayKey(); data.daily[k] = (data.daily[k] || 0) + (n - lastTotal); }
+    lastTotal = n; showCount();
+  }
+  function resyncTotal() { lastTotal = countWords(); showCount(); }
   editor.addEventListener('input', function (e) {
     var f = e.target;
     if (f.matches && f.matches('.part-title,.part-sub') && !f.textContent.trim()) f.innerHTML = '';
@@ -878,6 +972,7 @@
     toast('Moved to Cut Scenes', 'Undo', function () {
       editor.innerHTML = snapshot;
       normalize();
+      resyncTotal();
       data.cuts = data.cuts.filter(function (c) { return c.id !== item.id; });
       dirty(); changed(true); buildNav();
     });
@@ -892,8 +987,80 @@
   $('btnUndo').onclick = undo;
   $('btnRedo').onclick = redo;
 
+  /* ---- typing helpers: curly quotes and capitals at the start of sentences ---- */
+  var SMART = { curly: load('novel-writer-curly', '1') === '1', cap: load('novel-writer-autocap', '1') === '1' };
+  function textBeforeCaret() {
+    var sel = window.getSelection();
+    if (!sel.rangeCount) return null;
+    var r = sel.getRangeAt(0), b = blockOf(r.startContainer);
+    if (!b || b.nodeName !== 'P') return null;
+    var pre = document.createRange();
+    pre.setStart(b, 0); pre.setEnd(r.startContainer, r.startOffset);
+    return pre.toString();
+  }
+  function curlyFor(t, ch) {
+    var prev = t.slice(-1);
+    var opening = prev === '' || /[\s(\[“‘]/.test(prev);
+    if (ch === '"') return opening ? '“' : '”';
+    return opening ? '‘' : '’';
+  }
+  function shouldCap(t) {
+    var m = t.replace(/[“‘("'\[«]+$/, '');
+    if (m === '') return true;                              // start of a paragraph
+    if (!/\s$/.test(m)) return false;                       // mid-word, after a dash, etc.
+    m = m.replace(/\s+$/, '');
+    var mm = m.match(/([.!?…]+)([”’"')\]»]*)$/);
+    if (!mm) return false;
+    var term = mm[1], closers = mm[2];
+    if (/…/.test(term) || (term.length > 1 && /^\.+$/.test(term))) return false;   // "Well... maybe"
+    if (/[!?]$/.test(term) && /[”"]/.test(closers)) return false;                    // "Where?" she asked
+    if (term === '.') {
+      var before = m.slice(0, m.length - mm[0].length);
+      var w = (before.match(/([A-Za-z]+(?:\.[A-Za-z]+)*)$/) || [])[1];
+      if (w && /^(e\.g|i\.e|etc|vs|cf)$/i.test(w)) return false;
+    }
+    return true;
+  }
+  function ensureEditorSel() {
+    var sel = window.getSelection();
+    if (!sel.rangeCount || !editor.contains(sel.anchorNode)) {
+      var r0 = getRange(); editor.focus(); sel.removeAllRanges(); sel.addRange(r0);
+    }
+    return sel;
+  }
+  $('btnDash').onclick = function () { ensureEditorSel(); document.execCommand('insertText', false, '—'); };
+
   // Return never leaves a blank line: on an empty line (or at the very start of a paragraph) it just stays put.
   editor.addEventListener('beforeinput', function (e) {
+    if (e.inputType === 'insertText' && e.data && e.data.length === 1) {
+      var ch = e.data, tb;
+      // three periods become one ellipsis character, attached to the word before it
+      if (SMART.curly && ch === '.') {
+        var sel0 = window.getSelection(), r0 = sel0.rangeCount && sel0.getRangeAt(0), n0 = r0 && r0.startContainer, o0 = r0 && r0.startOffset;
+        if (r0 && r0.collapsed && n0.nodeType === 3 && o0 >= 2 && n0.data.slice(o0 - 2, o0) === '..' && textBeforeCaret() !== null) {
+          var from = o0 - 2;
+          if (from >= 2 && n0.data.charAt(from - 1) === ' ' && /\S/.test(n0.data.charAt(from - 2))) from -= 1;   // "well ..." -> "well…"
+          var rr = document.createRange();
+          rr.setStart(n0, from); rr.setEnd(n0, o0);
+          sel0.removeAllRanges(); sel0.addRange(rr);
+          e.preventDefault();
+          document.execCommand('insertText', false, '…');
+          return;
+        }
+      }
+      // a space after an ellipsis when a word follows it
+      if (SMART.curly && /[A-Za-z0-9À-ɏ]/.test(ch)) {
+        tb = textBeforeCaret();
+        if (tb && tb.slice(-1) === '…') { e.preventDefault(); document.execCommand('insertText', false, ' ' + ch); return; }
+      }
+      if (SMART.curly && (ch === '"' || ch === "'")) {
+        tb = textBeforeCaret();
+        if (tb !== null) { e.preventDefault(); document.execCommand('insertText', false, curlyFor(tb, ch)); return; }
+      } else if (SMART.cap && ch === ch.toLowerCase() && ch.toUpperCase() !== ch && ch.toUpperCase().length === 1) {
+        tb = textBeforeCaret();
+        if (tb !== null && shouldCap(tb)) { e.preventDefault(); document.execCommand('insertText', false, ch.toUpperCase()); return; }
+      }
+    }
     if (e.inputType === 'historyUndo') { e.preventDefault(); undo(); return; }
     if (e.inputType === 'historyRedo') { e.preventDefault(); redo(); return; }
     if (e.inputType === 'insertLineBreak') { e.preventDefault(); return; }
@@ -951,12 +1118,21 @@
 
   /* ---- contents list ---- */
   var navList = $('navList');
+  $('navPages').classList.toggle('on', showPages);
+  $('navPages').onclick = function () {
+    showPages = !showPages; save('novel-writer-showpages', showPages ? '1' : '');
+    this.classList.toggle('on', showPages); buildNav();
+  };
   var navTargets = [];
-  function addNavItem(label, cls, el, align) {
+  function addNavItem(label, cls, el, align, meta) {
     var b = document.createElement('button');
-    b.className = 'nav-item ' + cls;
-    b.textContent = label;
+    b.className = 'nav-item ' + cls + (meta ? ' has-pp' : '');
     b.title = label;
+    if (meta) {
+      var nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = label;
+      var pp = document.createElement('span'); pp.className = 'pp'; pp.textContent = meta;
+      b.appendChild(nm); b.appendChild(pp);
+    } else b.textContent = label;
     b.onclick = function () {
       el.scrollIntoView({ behavior: 'smooth', block: align });
       if (window.innerWidth <= 700) closePanels();
@@ -967,13 +1143,22 @@
   function buildNav() {
     navList.innerHTML = '';
     navTargets = [];
+    if (validPos()) {
+      var rb = document.createElement('button');
+      rb.className = 'nav-item resume';
+      rb.textContent = 'Where you left off';
+      rb.onclick = function () { jumpToLast(); if (window.innerWidth <= 700) closePanels(); };
+      navList.appendChild(rb);
+    }
     var ch = 0, br = 0, hasOpening = false, hasPart = false;
+    var ps = showPages ? pageStats() : null;
     Array.prototype.forEach.call(editor.children, function (el) {
       if (el.nodeName === 'H2') {
         ch++; br = 0;
         var t = el.textContent.trim();
         var hasNote = (data.chapterNotes[el.dataset.id] || '').trim() !== '';
-        addNavItem('Chapter ' + ch + (t ? ': ' + t : '') + (hasNote ? '  •' : ''), 'chapter', el, 'start');
+        var pg = ps ? ps.byEl.get(el) : 0;
+        addNavItem('Chapter ' + ch + (t ? ': ' + t : '') + (hasNote ? '  •' : ''), 'chapter', el, 'start', pg ? pg + (pg === 1 ? ' p' : ' pp') : '');
       } else if (el.classList.contains('part')) {
         br = 0; hasPart = true;
         var pt = (el.querySelector('.part-title') || {}).textContent || '';
@@ -1055,13 +1240,13 @@
   function closePanels() { layout.classList.remove('nav-open', 'notes-open'); panelBtns(); }
   $('btnNav').onclick = function () {
     var open = !layout.classList.contains('nav-open');
-    if (window.innerWidth <= 700) layout.classList.remove('notes-open');
+    layout.classList.remove('notes-open');
     layout.classList.toggle('nav-open', open);
     panelBtns();
   };
   $('btnCNotes').onclick = function () {
     var open = !layout.classList.contains('notes-open');
-    if (window.innerWidth <= 700) layout.classList.remove('nav-open');
+    layout.classList.remove('nav-open');
     layout.classList.toggle('notes-open', open);
     if (open) { curCh = undefined; refreshPanel(); }
     panelBtns();
@@ -1364,6 +1549,24 @@
     $('expStats').textContent = 'Your book: ' + words.toLocaleString() + ' words \u00b7 ' + ch + (ch === 1 ? ' chapter' : ' chapters') +
       (pt ? ' \u00b7 ' + pt + (pt === 1 ? ' part page' : ' part pages') : '');
   }
+  function updatePageEst() {
+    var f = data.fmt;
+    $('fmtPreset').value = f.preset;
+    $('fmtCustomRow').hidden = f.preset !== 'custom';
+    if (f.preset === 'custom') $('fmtWpp').value = f.wpp;
+    var st = pageStats();
+    $('pageEst').textContent = 'About ' + st.total.toLocaleString() + ' pages (' + f.preset + ', ' + st.wpp + ' words per page): ' +
+      st.chapters + (st.chapters === 1 ? ' chapter' : ' chapters') + (st.parts ? ', ' + st.parts + (st.parts === 1 ? ' part page' : ' part pages') : '') + '.';
+  }
+  $('fmtPreset').onchange = function () {
+    data.fmt.preset = this.value;
+    if (this.value === 'custom' && !(data.fmt.wpp >= 50)) data.fmt.wpp = 300;
+    dirty(); updatePageEst(); buildNav();
+  };
+  $('fmtWpp').oninput = function () {
+    var v = parseInt(this.value, 10);
+    if (v >= 50) { data.fmt.wpp = v; dirty(); updatePageEst(); buildNav(); }
+  };
   $('expJson').onclick = function () {
     flush();
     var blob = new Blob([payload()], { type: 'application/json' });
@@ -1384,8 +1587,8 @@
     $('writeTools').hidden = name !== 'writing';
     if (name === 'notes') rerender();
     if (name === 'import') { updateImportUI(); impMsg(''); }
-    if (name === 'export') { updateExportStats(); $('expMsg').textContent = ''; }
-    if (name === 'writing') { updateActive(); curCh = undefined; refreshPanel(); }
+    if (name === 'export') { updateExportStats(); updatePageEst(); $('expMsg').textContent = ''; }
+    if (name === 'writing') { updateActive(); curCh = undefined; refreshPanel(); firstJump(); }
     save('novel-writer-tab', name);
   }
   Array.prototype.forEach.call($('tabs').children, function (b) {
@@ -1428,6 +1631,9 @@
   setFont(parseFloat(load('novel-writer-fontsize', window.innerWidth < 600 ? 18 : 20)));
   setIndent(parseFloat(load('novel-writer-indent', 1.5)));
   setPW(parseFloat(load('novel-writer-pagewidth', 760)));
+  $('optCap').checked = SMART.cap; $('optCurly').checked = SMART.curly;
+  $('optCap').onchange = function () { SMART.cap = this.checked; save('novel-writer-autocap', this.checked ? '1' : '0'); };
+  $('optCurly').onchange = function () { SMART.curly = this.checked; save('novel-writer-curly', this.checked ? '1' : '0'); };
   themeSel.value = load('novel-writer-theme', 'system');
   applyTheme();
   fsSlider.oninput = function () { setFont(fsSlider.value); save('novel-writer-fontsize', fsSlider.value); updateActive(); };
@@ -1530,13 +1736,17 @@
     });
     return t.innerHTML;
   }
-  function applyPayload(p) {
+  function applyPayload(p, jump) {
     if (!p || typeof p.draft !== 'string' || !p.notes || typeof p.notes !== 'object') throw fail('The Drive file is not a Novel Writer book.', 'bad');
     editor.innerHTML = clean(p.draft);
     LISTS.forEach(function (k) { data[k] = Array.isArray(p.notes[k]) ? p.notes[k] : []; });
     data.chapterNotes = (p.notes.chapterNotes && typeof p.notes.chapterNotes === 'object') ? p.notes.chapterNotes : {};
+    data.daily = (p.notes.daily && typeof p.notes.daily === 'object') ? p.notes.daily : {};
+    data.pos = (p.notes.pos && typeof p.notes.pos === 'object') ? p.notes.pos : null;
+    data.fmt = (p.notes.fmt && typeof p.notes.fmt === 'object') ? p.notes.fmt : { preset: 'paperback', wpp: 300 };
     normalize();
-    updateCount(); buildNav();
+    resyncTotal(); buildNav();
+    if (jump && !$('tab-writing').hidden) setTimeout(jumpToLast, 60);
     curCh = undefined; refreshPanel();
     if (!$('tab-notes').hidden) rerender();
     resetHistory();
@@ -1575,7 +1785,7 @@
   async function pull(meta, startRev) {
     var p = await readFile(meta.id);
     if (rev !== startRev) { syncAgain = true; return; }   // you typed while we were downloading; re-check
-    applyPayload(p);
+    applyPayload(p, Date.now() - T0 < 30000);
     save(K_MOD, meta.modifiedTime); save(K_DIRTY, '0');
     setStatus('ok', 'Synced ' + clock());
   }
