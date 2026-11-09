@@ -113,6 +113,7 @@
   .nav-item .pp { flex: none; font-size: 12px; color: var(--muted); }
   .nav-title { display: flex; align-items: center; justify-content: space-between; }
   .nav-title .mini { background: none; border: 0; padding: 2px 6px; color: var(--muted); border-radius: 4px; display: inline-flex; }
+  .nav-tools { display: inline-flex; gap: 2px; }
   .nav-title .mini.on { color: var(--accent); background: var(--btnhover); }
   .fmt-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 14px; }
   .fmt-row select, .fmt-row input { font: inherit; font-size: 14px; padding: 6px 8px; background: var(--paper); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; }
@@ -468,7 +469,7 @@
     <section class="tab" id="tab-writing">
       <div class="layout" id="layout">
         <nav class="nav" id="nav">
-          <div class="nav-title"><span>Contents</span><button class="mini" id="navPages" title="Show estimated pages for each chapter" aria-label="Show page counts"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></svg></button></div>
+          <div class="nav-title"><span>Contents</span><span class="nav-tools"><button class="mini" id="navBreaks" title="Show scene breaks in the Contents" aria-label="Show scene breaks"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h.01M12 12h.01M19 12h.01"/></svg></button><button class="mini" id="navPages" title="Show estimated pages for each chapter" aria-label="Show page counts"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></svg></button></span></div>
           <div id="navList"></div>
         </nav>
         <aside class="cnotes" id="cnotes">
@@ -649,6 +650,7 @@
     return { byEl: byEl, total: total, chapters: chapters, parts: parts, wpp: wpp };
   }
   var showPages = load('novel-writer-showpages', '') === '1';
+  var showBreaks = load('novel-writer-showbreaks', '1') !== '0';
 
   var jumped = false, T0 = Date.now();
   function validPos() { var st = data.pos; return st && nodeAt(st.f) ? st : null; }
@@ -1178,6 +1180,11 @@
 
   /* ---- contents list ---- */
   var navList = $('navList');
+  $('navBreaks').classList.toggle('on', showBreaks);
+  $('navBreaks').onclick = function () {
+    showBreaks = !showBreaks; save('novel-writer-showbreaks', showBreaks ? '1' : '0');
+    this.classList.toggle('on', showBreaks); buildNav();
+  };
   $('navPages').classList.toggle('on', showPages);
   $('navPages').onclick = function () {
     showPages = !showPages; save('novel-writer-showpages', showPages ? '1' : '');
@@ -1219,19 +1226,16 @@
         var hasNote = (data.chapterNotes[el.dataset.id] || '').trim() !== '';
         var pg = ps ? ps.byEl.get(el) : 0;
         addNavItem('Chapter ' + ch + (t ? ': ' + t : '') + (hasNote ? '  •' : ''), 'chapter', el, 'start', pg ? pg + (pg === 1 ? ' p' : ' pp') : '');
+        addGrip(navTargets[navTargets.length - 1].btn, el, 'Drag to move this chapter');
       } else if (el.classList.contains('part')) {
         br = 0; hasPart = true;
         var pt = (el.querySelector('.part-title') || {}).textContent || '';
         addNavItem('Part' + (pt.trim() ? ': ' + pt.trim() : ' (untitled)'), 'chapter part-i', el, 'start');
-        var pb = navTargets[navTargets.length - 1].btn, gr = document.createElement('span');
-        gr.className = 'grip'; gr.textContent = '\u22ee\u22ee'; gr.title = 'Drag to move this part page';
-        pb.insertBefore(gr, pb.firstChild);
-        gr.onclick = function (e) { e.stopPropagation(); };
-        gr.addEventListener('pointerdown', function (e) { startPartDrag(e, el, pb); });
+        addGrip(navTargets[navTargets.length - 1].btn, el, 'Drag to move this part page');
       } else if (el.classList.contains('scene-break')) {
         if (ch === 0 && !hasOpening && !hasPart) { addNavItem('Opening', 'chapter', editor, 'start'); hasOpening = true; }
         br++;
-        addNavItem('Break ' + br, 'sub', el, 'center');
+        if (showBreaks) addNavItem('Break ' + br, 'sub', el, 'center');
       }
     });
     if (!navTargets.length) {
@@ -1243,6 +1247,20 @@
     updateActive();
   }
   /* ---- drag a part page to a new place from the Contents ---- */
+  function addGrip(btn, el, tip) {
+    var gr = document.createElement('span');
+    gr.className = 'grip'; gr.textContent = '\u22ee\u22ee'; gr.title = tip;
+    btn.insertBefore(gr, btn.firstChild);
+    gr.onclick = function (e) { e.stopPropagation(); };
+    gr.addEventListener('pointerdown', function (e) { startPartDrag(e, el, btn); });
+  }
+  function blockNodes(el) {
+    var list = [el];
+    if (el.nodeName === 'H2') {
+      for (var n = el.nextElementSibling; n && n.nodeName !== 'H2' && !n.classList.contains('part'); n = n.nextElementSibling) list.push(n);
+    }
+    return list;
+  }
   function startPartDrag(e, partEl, btn) {
     if (e.button) return;
     e.preventDefault(); e.stopPropagation();
@@ -1271,7 +1289,7 @@
     var ti = -1;
     navTargets.forEach(function (t, i) { if (t.btn === targetBtn) ti = i; });
     if (ti < 0) return;
-    var ref;
+    var ref, nodes = blockNodes(partEl);
     if (sd === 'before') ref = navTargets[ti].el === editor ? editor.firstElementChild : navTargets[ti].el;
     else {
       ref = null;
@@ -1280,12 +1298,12 @@
         if (t.el !== partEl && t.btn.classList.contains('chapter')) { ref = t.el; break; }
       }
     }
-    if (ref === partEl || (ref && ref.previousElementSibling === partEl && false)) return;
+    if (ref && nodes.indexOf(ref) >= 0) return;
     commitHistory();
-    editor.insertBefore(partEl, ref || null);
+    nodes.forEach(function (n) { editor.insertBefore(n, ref || null); });
     ensureContent(); cleanEmpties();
-    changed(true); buildNav();
-    toast('Part page moved');
+    changed(true); buildNav(); refreshPanel();
+    toast(partEl.nodeName === 'H2' ? 'Chapter moved' : 'Part page moved');
   }
   function updateActive() {
     var top = scroller.getBoundingClientRect().top + 80, cur = null;
